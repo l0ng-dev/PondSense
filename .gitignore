@@ -1,0 +1,38 @@
+# 本地敏感配置
+PondSense/Config/*.local.h
+PondSense/Config/*secret*.local.*
+
+# Keil / ARM 编译中间文件与构建产物
+PondSense/MDK-ARM/Objects/
+PondSense/MDK-ARM/Listings/
+PondSense/MDK-ARM/*.axf
+PondSense/MDK-ARM/*.hex
+PondSense/MDK-ARM/*.bin
+PondSense/MDK-ARM/*.map
+PondSense/MDK-ARM/*.htm
+PondSense/MDK-ARM/*.lnp
+PondSense/MDK-ARM/*.dep
+PondSense/MDK-ARM/*.crf
+PondSense/MDK-ARM/*.d
+PondSense/MDK-ARM/*.o
+PondSense/MDK-ARM/*.sct
+PondSense/MDK-ARM/*.scat
+PondSense/MDK-ARM/PondSense/
+
+# IDE 用户状态、临时文件和系统文件
+**/*.uvguix.*
+**/*.uvoptx
+**/*.bak
+**/*.tmp
+**/*.temp
+**/*~
+.vs/
+.vscode/
+Thumbs.db
+Desktop.ini
+
+# 测试/运行生成的缓存
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+**/coverage/
