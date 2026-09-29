@@ -36,3 +36,4 @@ Desktop.ini
 **/*.pyc
 **/.pytest_cache/
 **/coverage/
+AGENTS.md
