@@ -24,14 +24,16 @@
 /* 单个滑板伸出—收回循环的限时驱动时长。 */
 #define FEED_MOTOR_RUN_MS              17000U
 #define FEED_MOTOR_GAP_MS              1000U
-#define FEEDING_PERIOD_MS               60000U
+#define FEEDING_OBSERVATION_DELAY_MS     8000U
 #define KEY0_DEBOUNCE_MS                30U
 #define IWDG_UPDATE_TIMEOUT_MS          100U
 
 static Button key0;
 static Feeding feeding;
-static uint8_t additional_active;
-static uint32_t additional_next_ms;
+static uint8_t batch_cycle_active;
+static uint32_t batch_next_cycle_ms;
+static uint8_t final_cycle_started;
+static uint32_t final_cycle_start_ms;
 static uint32_t next_event_id = 1U;
 
 volatile HAL_StatusTypeDef sensing_init_status;
@@ -42,46 +44,50 @@ volatile uint32_t last_result_valid;
 volatile uint32_t last_result_level;
 volatile uint32_t last_upload_event_id;
 volatile uint32_t last_upload_status;
-volatile uint32_t planned_additional_cycles;
-volatile uint32_t pending_additional_cycles;
-volatile uint32_t completed_additional_cycles;
-volatile uint8_t additional_status;
+volatile uint32_t planned_batch_cycles;
+volatile uint32_t pending_batch_cycles;
+volatile uint32_t completed_batch_cycles;
+volatile FeedingBatchStatus batch_status;
 
-/* 根据 K230 返回的等级准备 0/1/2 个追加循环。 */
-static void additional_arm(uint8_t cycles, uint32_t now_ms)
+static void batch_process(uint32_t now_ms);
+
+/* 准备包含 1 或 2 个机械循环的当前投喂批次。 */
+static void batch_arm(uint8_t cycles, uint32_t now_ms)
 {
-  planned_additional_cycles = cycles;
-  pending_additional_cycles = cycles;
-  completed_additional_cycles = 0U;
-  additional_active = 0U;
-  additional_next_ms = now_ms;
-  additional_status = (cycles > 0U)
-                          ? FEEDING_ADDITIONAL_WAITING
-                          : FEEDING_ADDITIONAL_IDLE;
+  planned_batch_cycles = cycles;
+  pending_batch_cycles = cycles;
+  completed_batch_cycles = 0U;
+  batch_cycle_active = 0U;
+  batch_next_cycle_ms = now_ms;
+  final_cycle_started = 0U;
+  final_cycle_start_ms = 0U;
+  batch_status = (cycles > 0U)
+                     ? FEEDING_BATCH_WAITING
+                     : FEEDING_BATCH_IDLE;
 }
 
-/* 非阻塞推进追加投喂，循环之间保留机械释放间隔。 */
-static void additional_process(uint32_t now_ms)
+/* 非阻塞推进当前投喂批次，循环之间保留机械释放间隔。 */
+static void batch_process(uint32_t now_ms)
 {
-  if (additional_active != 0U)
+  if (batch_cycle_active != 0U)
   {
     if (FeedMotor_IsRunning() != 0U)
     {
       return;
     }
-    additional_active = 0U;
-    completed_additional_cycles++;
-    if (pending_additional_cycles == 0U)
+    batch_cycle_active = 0U;
+    completed_batch_cycles++;
+    if (pending_batch_cycles == 0U)
     {
-      additional_status = FEEDING_ADDITIONAL_COMPLETE;
+      batch_status = FEEDING_BATCH_COMPLETE;
       return;
     }
-    additional_next_ms = now_ms + FEED_MOTOR_GAP_MS;
-    additional_status = FEEDING_ADDITIONAL_WAITING;
+    batch_next_cycle_ms = now_ms + FEED_MOTOR_GAP_MS;
+    batch_status = FEEDING_BATCH_WAITING;
   }
 
-  if ((pending_additional_cycles == 0U) ||
-      ((int32_t)(now_ms - additional_next_ms) < 0) ||
+  if ((pending_batch_cycles == 0U) ||
+      ((int32_t)(now_ms - batch_next_cycle_ms) < 0) ||
       (FeedMotor_IsRunning() != 0U))
   {
     return;
@@ -89,39 +95,51 @@ static void additional_process(uint32_t now_ms)
 
   if (FeedMotor_Start(FEED_MOTOR_RUN_MS) == HAL_OK)
   {
-    pending_additional_cycles--;
-    additional_active = 1U;
-    additional_status = FEEDING_ADDITIONAL_MOTOR_RUNNING;
+    pending_batch_cycles--;
+    batch_cycle_active = 1U;
+    if (pending_batch_cycles == 0U)
+    {
+      final_cycle_started = 1U;
+      final_cycle_start_ms = now_ms;
+    }
+    batch_status = FEEDING_BATCH_MOTOR_RUNNING;
   }
   else
   {
-    pending_additional_cycles = 0U;
-    additional_status = FEEDING_ADDITIONAL_FAILED;
+    pending_batch_cycles = 0U;
+    batch_status = FEEDING_BATCH_FAILED;
   }
 }
 
-static uint8_t start_initial(void *context)
+static uint8_t start_batch(uint8_t cycles,
+                           uint32_t now_ms,
+                           void *context)
 {
   VisionState vision_state = Vision_GetState();
 
   (void)context;
   if ((FeedMotor_IsRunning() != 0U) ||
-      (pending_additional_cycles != 0U) ||
-      (additional_active != 0U) ||
+      (cycles == 0U) ||
+      (cycles > 2U) ||
+      (pending_batch_cycles != 0U) ||
+      (batch_cycle_active != 0U) ||
       ((vision_state != VISION_IDLE) &&
        (vision_state != VISION_TIMED_OUT) &&
        (vision_state != VISION_REJECTED)))
   {
     return 0U;
   }
-  additional_arm(0U, HAL_GetTick());
-  return (uint8_t)(FeedMotor_Start(FEED_MOTOR_RUN_MS) == HAL_OK);
+  batch_arm(cycles, now_ms);
+  batch_process(now_ms);
+  return (uint8_t)(batch_status != FEEDING_BATCH_FAILED);
 }
 
-static uint8_t motor_running(void *context)
+static uint8_t observation_due(uint32_t now_ms, void *context)
 {
   (void)context;
-  return FeedMotor_IsRunning();
+  return (uint8_t)((final_cycle_started != 0U) &&
+                   ((uint32_t)(now_ms - final_cycle_start_ms) >=
+                    FEEDING_OBSERVATION_DELAY_MS));
 }
 
 static uint8_t start_observation(uint32_t now_ms,
@@ -147,25 +165,17 @@ static uint8_t start_observation(uint32_t now_ms,
   return 1U;
 }
 
-static void arm_additional(uint8_t cycles,
-                           uint32_t now_ms,
-                           void *context)
+static uint8_t get_batch_status(void *context)
 {
   (void)context;
-  additional_arm(cycles, now_ms);
-}
-
-static uint8_t get_additional_status(void *context)
-{
-  (void)context;
-  return additional_status;
+  return (uint8_t)batch_status;
 }
 
 static void stop_motor(void *context)
 {
   (void)context;
   FeedMotor_Stop();
-  additional_arm(0U, HAL_GetTick());
+  batch_arm(0U, HAL_GetTick());
 }
 
 /* 使用寄存器启动独立看门狗，并等待预分频/重载值同步完成。 */
@@ -196,12 +206,11 @@ static void watchdog_start(void)
 void PondSense_Init(void)
 {
   const FeedingOps feeding_ops = {
-      start_initial,
-      motor_running,
-      start_observation,
-      arm_additional,
-      get_additional_status,
-      stop_motor};
+      .start_batch = start_batch,
+      .batch_status = get_batch_status,
+      .observation_due = observation_due,
+      .start_observation = start_observation,
+      .stop_motor = stop_motor};
   uint32_t now_ms = HAL_GetTick();
 
   FeedMotor_Init();
@@ -218,10 +227,7 @@ void PondSense_Init(void)
                                      now_ms);
   telemetry_init_status = Telemetry_Init(&huart5, now_ms);
   vision_init_status = Vision_Init(&huart2);
-  Feeding_Init(&feeding,
-               FEEDING_PERIOD_MS,
-               &feeding_ops,
-               NULL);
+  Feeding_Init(&feeding, &feeding_ops, NULL);
   watchdog_start();
 }
 
@@ -242,7 +248,7 @@ void PondSense_Process(void)
   if ((feeding.state == FEEDING_WAIT_KEY0) &&
       (Button_TakePress(&key0, now_ms) != 0U))
   {
-    (void)Feeding_Unlock(&feeding);
+    (void)Feeding_Unlock(&feeding, now_ms);
   }
 
   if (Vision_TakeResult(&result) != 0U)
@@ -251,14 +257,11 @@ void PondSense_Process(void)
     last_result_valid = result.valid;
     last_result_level = result.level;
     last_upload_status = result.upload_status;
-    if (feeding.state == FEEDING_OBSERVING)
-    {
-      (void)Feeding_AcceptResult(&feeding,
-                                 result.event_id,
-                                 result.valid,
-                                 result.level,
-                                 now_ms);
-    }
+    (void)Feeding_AcceptResult(&feeding,
+                               result.event_id,
+                               result.valid,
+                               result.level,
+                               now_ms);
   }
   if (Vision_TakeUpload(&result) != 0U)
   {
@@ -267,7 +270,7 @@ void PondSense_Process(void)
   }
 
   vision_state = Vision_GetState();
-  if (feeding.state == FEEDING_OBSERVING)
+  if (Feeding_IsObservationPending(&feeding) != 0U)
   {
     if (vision_state == VISION_TIMED_OUT)
     {
@@ -289,7 +292,7 @@ void PondSense_Process(void)
   Sensing_Process(now_ms);
   /* Use a fresh timestamp for motor sequencing after sensor processing. */
   now_ms = HAL_GetTick();
-  additional_process(now_ms);
+  batch_process(now_ms);
   Feeding_Process(&feeding, now_ms);
   Sensing_GetSnapshot(&sensors);
 
@@ -301,9 +304,9 @@ void PondSense_Process(void)
   display_data.result_level = (uint8_t)last_result_level;
   display_data.feeding_state = feeding.state;
   display_data.feeding_fault = feeding.fault;
-  display_data.planned_cycles = planned_additional_cycles;
-  display_data.completed_cycles = completed_additional_cycles;
-  display_data.additional_status = additional_status;
+  display_data.planned_cycles = planned_batch_cycles;
+  display_data.completed_cycles = completed_batch_cycles;
+  display_data.batch_status = batch_status;
   Display_Process(now_ms, &display_data);
 
   Telemetry_Process(now_ms,

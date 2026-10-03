@@ -159,24 +159,20 @@ static void format_feeding(const DisplayData *data,
       (void)snprintf(line, size, "FEED: INITIAL");
       *color = BLUE;
       break;
-    case FEEDING_AUTO_WAIT:
-      (void)snprintf(line, size, "FEED: AUTO RUN");
-      *color = GREEN;
-      break;
     case FEEDING_OBSERVING:
       (void)snprintf(line, size, "FEED: WAIT RESULT");
       *color = BLUE;
       break;
-    case FEEDING_ADDITIONAL_RUNNING:
+    case FEEDING_BATCH_RUNNING:
       displayed_cycle = data->completed_cycles;
-      if ((data->additional_status == FEEDING_ADDITIONAL_MOTOR_RUNNING) &&
+      if ((data->batch_status == FEEDING_BATCH_MOTOR_RUNNING) &&
           (displayed_cycle < data->planned_cycles))
       {
         displayed_cycle++;
       }
       (void)snprintf(line,
                      size,
-                     "FEED: EXTRA %lu/%lu",
+                     "FEED: BATCH %lu/%lu",
                      (unsigned long)displayed_cycle,
                      (unsigned long)data->planned_cycles);
       *color = BLUE;

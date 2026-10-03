@@ -24,7 +24,7 @@ typedef struct
   FeedingFault feeding_fault;
   uint32_t planned_cycles;
   uint32_t completed_cycles;
-  uint8_t additional_status;
+  FeedingBatchStatus batch_status;
 } DisplayData;
 
 void Display_Init(void);
