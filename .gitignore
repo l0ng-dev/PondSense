@@ -1,0 +1,13 @@
+# Local development rules and handover reports
+/AGENTS.md
+/PondSense_RA4M2_开发交接报告_*.md
+
+# Keil build output and personal session state
+/pondsence_RA4M2/Objects/
+/pondsence_RA4M2/Listings/
+/pondsence_RA4M2/*.uvguix.*
+/pondsence_RA4M2/*.uvoptx
+/pondsence_RA4M2/*_build.log
+
+# RASC generation marker
+/pondsence_RA4M2/output.rasc
