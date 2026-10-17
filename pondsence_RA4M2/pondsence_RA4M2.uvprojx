@@ -405,6 +405,16 @@
               <FilePath>.\src\app\app_main.h</FilePath>
             </File>
             <File>
+              <FileName>app_display.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\app\app_display.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_display.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\app\app_display.h</FilePath>
+            </File>
+            <File>
               <FileName>ds18b20.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\src\modules\ds18b20\ds18b20.c</FilePath>
@@ -413,6 +423,21 @@
               <FileName>ds18b20.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\src\modules\ds18b20\ds18b20.h</FilePath>
+            </File>
+            <File>
+              <FileName>ssd1306.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\modules\ssd1306\ssd1306.c</FilePath>
+            </File>
+            <File>
+              <FileName>ssd1306.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\modules\ssd1306\ssd1306.h</FilePath>
+            </File>
+            <File>
+              <FileName>ssd1306_font.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\modules\ssd1306\ssd1306_font.h</FilePath>
             </File>
           </Files>
         </Group>

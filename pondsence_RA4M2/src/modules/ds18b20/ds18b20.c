@@ -1,14 +1,14 @@
 /**
  * @file ds18b20.c
- * @brief P408 上的单只 DS18B20 单总线驱动。
- * @note 板载 R26 上拉到 USB_3V3；实际供电和 DQ 上拉仍需实物核对。
+ * @brief P015 上的单只 DS18B20 单总线驱动。
+ * @note P015 需要接到有效 3.3 V 的外部上拉；实际接线与上拉仍需实物核对。
  *       每次读取九字节 scratchpad，并用第九字节校验前八字节的 CRC。
  */
 #include "ds18b20.h"
 
 #include "hal_data.h"
 
-#define DS18B20_PIN           BSP_IO_PORT_04_PIN_08
+#define DS18B20_PIN           BSP_IO_PORT_00_PIN_15
 #define DS18B20_CONVERSION_MS 750U
 #define DS18B20_MIN_CENTI_C   (-5500)
 #define DS18B20_MAX_CENTI_C   12500
@@ -58,10 +58,10 @@ static bsp_ds18b20_result_t reset_and_detect(void)
     }
     delay_us(480U);
 
-    /* Protect the presence sample from interrupt latency. */
+    /* 短暂屏蔽中断，避免中断延迟影响存在脉冲的采样时刻。 */
     uint32_t primask = __get_PRIMASK();
     __disable_irq();
-    result = bus_write(BSP_IO_LEVEL_HIGH); /* Open-drain high releases DQ. */
+    result = bus_write(BSP_IO_LEVEL_HIGH); /* 开漏输出写高表示释放 DQ。 */
     if (BSP_DS18B20_OK == result)
     {
         delay_us(70U);
@@ -195,7 +195,7 @@ bsp_ds18b20_result_t BSP_DS18B20_Init(bsp_ds18b20_t * sensor)
     sensor->conversion_pending = false;
     sensor->conversion_started_ms = 0U;
 
-    /* Only drive low; writing high leaves the externally pulled-up bus released. */
+    /* 只主动拉低总线；写高时释放 DQ，由外部上拉提供高电平。 */
     uint32_t const cfg = IOPORT_CFG_PORT_DIRECTION_OUTPUT |
                          IOPORT_CFG_PORT_OUTPUT_HIGH |
                          IOPORT_CFG_NMOS_ENABLE;
@@ -228,10 +228,10 @@ bsp_ds18b20_result_t BSP_DS18B20_StartConversion(bsp_ds18b20_t * sensor, uint32_
     {
         return result;
     }
-    result = write_byte(0xCCU); /* Skip ROM: one sensor on the bus. */
+    result = write_byte(0xCCU); /* 跳过 ROM 寻址：总线上只连接一只探头。 */
     if (BSP_DS18B20_OK == result)
     {
-        result = write_byte(0x44U); /* Convert T. */
+        result = write_byte(0x44U); /* 发送温度转换命令。 */
     }
     if (BSP_DS18B20_OK == result)
     {
@@ -284,7 +284,7 @@ bsp_ds18b20_result_t BSP_DS18B20_ReadCentiC(bsp_ds18b20_t * sensor,
     result = write_byte(0xCCU);
     if (BSP_DS18B20_OK == result)
     {
-        result = write_byte(0xBEU); /* Read Scratchpad. */
+        result = write_byte(0xBEU); /* 读取暂存寄存器的九字节数据。 */
     }
     if (BSP_DS18B20_OK != result)
     {

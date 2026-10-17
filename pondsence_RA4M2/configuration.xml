@@ -287,9 +287,25 @@
     </config>
   </raModuleConfiguration>
   <raPinConfiguration>
-    <symbolicName propertyId="p408.symbolic_name" value="DS18B20_DQ"/>
-    <comment propertyId="p408.comment" value="DS18B20 1-Wire Data"/>
+    <symbolicName propertyId="p000.symbolic_name" value="OLED_SCL"/>
+    <symbolicName propertyId="p001.symbolic_name" value="OLED_SDA"/>
+    <comment propertyId="p000.comment" value="OLED software I2C SCL, CN4 pin 6, open-drain; external 3.3V pull-up required"/>
+    <comment propertyId="p001.comment" value="OLED software I2C SDA, CN4 pin 7, open-drain; external 3.3V pull-up required"/>
+    <symbolicName propertyId="p014.symbolic_name" value="PH_PO"/>
+    <symbolicName propertyId="p015.symbolic_name" value="DS18B20_DAT"/>
+    <comment propertyId="p014.comment" value="pH module PO analog output to ADC0 AN12; verify input voltage range before use"/>
+    <comment propertyId="p015.comment" value="DS18B20 1-Wire DAT; requires external pull-up to 3.3V"/>
     <pincfg active="true" name="R7FA4M2AD3CFL.pincfg" selected="true" symbol="g_bsp_pin_cfg">
+      <configSetting altId="p000.output.high" configurationId="p000"/>
+      <configSetting altId="p000.gpio_mode.gpio_mode_out.high" configurationId="p000.gpio_mode"/>
+      <configSetting altId="p000.gpio_otype.gpio_otype_n_ch_od" configurationId="p000.gpio_otype"/>
+      <configSetting altId="p001.output.high" configurationId="p001"/>
+      <configSetting altId="p001.gpio_mode.gpio_mode_out.high" configurationId="p001.gpio_mode"/>
+      <configSetting altId="p001.gpio_otype.gpio_otype_n_ch_od" configurationId="p001.gpio_otype"/>
+      <configSetting altId="p407.input" configurationId="p407"/>
+      <configSetting altId="p407.gpio_mode.gpio_mode_in" configurationId="p407.gpio_mode"/>
+      <configSetting altId="p408.input" configurationId="p408"/>
+      <configSetting altId="p408.gpio_mode.gpio_mode_in" configurationId="p408.gpio_mode"/>
       <configSetting altId="adc0.an12.p014" configurationId="adc0.an12"/>
       <configSetting altId="adc0.mode.custom" configurationId="adc0.mode"/>
       <configSetting altId="debug0.mode.jtag" configurationId="debug0.mode"/>
@@ -299,6 +315,8 @@
       <configSetting altId="debug0.tms.p108" configurationId="debug0.tms"/>
       <configSetting altId="p014.adc0.an12" configurationId="p014"/>
       <configSetting altId="p014.gpio_mode.gpio_mode_an" configurationId="p014.gpio_mode"/>
+      <configSetting altId="p015.input" configurationId="p015"/>
+      <configSetting altId="p015.gpio_mode.gpio_mode_in" configurationId="p015.gpio_mode"/>
       <configSetting altId="p108.debug0.tms" configurationId="p108"/>
       <configSetting altId="p108.gpio_mode.gpio_mode_peripheral" configurationId="p108.gpio_mode"/>
       <configSetting altId="p109.debug0.tdo" configurationId="p109"/>
@@ -307,8 +325,6 @@
       <configSetting altId="p110.gpio_mode.gpio_mode_peripheral" configurationId="p110.gpio_mode"/>
       <configSetting altId="p300.debug0.tck" configurationId="p300"/>
       <configSetting altId="p300.gpio_mode.gpio_mode_peripheral" configurationId="p300.gpio_mode"/>
-      <configSetting altId="p408.input" configurationId="p408"/>
-      <configSetting altId="p408.gpio_mode.gpio_mode_in" configurationId="p408.gpio_mode"/>
     </pincfg>
   </raPinConfiguration>
 </raConfiguration>

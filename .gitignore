@@ -11,3 +11,13 @@
 
 # RASC generation marker
 /pondsence_RA4M2/output.rasc
+
+# Standalone F407 SPI capture: generated output and local debugger settings
+/tools/F407_SPI_Capture/OBJ/
+/tools/F407_SPI_Capture/PROJECT/*.uvguix.*
+/tools/F407_SPI_Capture/PROJECT/*.uvoptx
+/tools/F407_SPI_Capture/PROJECT/*_build.log
+/tools/F407_SPI_Capture/PROJECT/RTE/**/*.base@*
+
+# Local RASC text report
+/pondsence_RA4M2/ra_cfg.txt

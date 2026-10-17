@@ -1,10 +1,11 @@
 /**
  * @file app_main.c
- * @brief 温度模块与 pH ADC 采样、未校准临时估算的非阻塞应用调度。
+ * @brief 调度温度与 pH ADC 采样状态机、未校准临时估算及显示层调用。
  */
 #include "app_main.h"
 
 #include "hal_data.h"
+#include "app_display.h"
 
 #define APP_TEMPERATURE_PERIOD_MS  1000U
 #define APP_CONVERSION_TIMEOUT_MS  1000U
@@ -354,10 +355,13 @@ void App_Main(void)
         }
     }
 
+    App_Display_Init();
+
     for (;;)
     {
         app_temperature_process(s_uptime_ms);
         app_ph_adc_process(s_uptime_ms);
+        App_Display_Process(s_uptime_ms, &g_app_temperature, &g_app_ph_adc);
         __WFI();
     }
 }

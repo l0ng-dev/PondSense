@@ -11,12 +11,17 @@
     <generator id="Renesas RA Smart Configurator">
       <project_files>
         <file category="include" name="src/"/>
+        <file category="source" name="src/app/app_display.c"/>
+        <file category="header" name="src/app/app_display.h" path=""/>
         <file category="source" name="src/app/app_main.c"/>
         <file category="header" name="src/app/app_main.h" path=""/>
         <file category="source" name="src/hal_entry.c"/>
         <file category="source" name="src/hal_warmstart.c"/>
         <file category="source" name="src/modules/ds18b20/ds18b20.c"/>
         <file category="header" name="src/modules/ds18b20/ds18b20.h" path=""/>
+        <file category="source" name="src/modules/ssd1306/ssd1306.c"/>
+        <file category="header" name="src/modules/ssd1306/ssd1306.h" path=""/>
+        <file category="header" name="src/modules/ssd1306/ssd1306_font.h" path=""/>
       </project_files>
     </generator>
   </generators>
