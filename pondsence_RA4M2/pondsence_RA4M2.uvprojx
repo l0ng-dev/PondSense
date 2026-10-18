@@ -405,6 +405,36 @@
               <FilePath>.\src\app\app_main.h</FilePath>
             </File>
             <File>
+              <FileName>app_feeding.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\app\app_feeding.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_feeding.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\app\app_feeding.h</FilePath>
+            </File>
+            <File>
+              <FileName>app_k230.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\app\app_k230.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_k230.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\app\app_k230.h</FilePath>
+            </File>
+            <File>
+              <FileName>app_network.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\app\app_network.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_network.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\app\app_network.h</FilePath>
+            </File>
+            <File>
               <FileName>app_display.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\src\app\app_display.c</FilePath>
@@ -418,6 +448,26 @@
               <FileName>ds18b20.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\src\modules\ds18b20\ds18b20.c</FilePath>
+            </File>
+            <File>
+              <FileName>feed_motor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\modules\feed_motor\feed_motor.c</FilePath>
+            </File>
+            <File>
+              <FileName>feed_motor.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\modules\feed_motor\feed_motor.h</FilePath>
+            </File>
+            <File>
+              <FileName>k230.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\protocol\k230\k230.c</FilePath>
+            </File>
+            <File>
+              <FileName>k230.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\protocol\k230\k230.h</FilePath>
             </File>
             <File>
               <FileName>ds18b20.h</FileName>
@@ -438,6 +488,26 @@
               <FileName>ssd1306_font.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\src\modules\ssd1306\ssd1306_font.h</FilePath>
+            </File>
+            <File>
+              <FileName>uart_rx.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\modules\uart_rx\uart_rx.c</FilePath>
+            </File>
+            <File>
+              <FileName>uart_rx.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\modules\uart_rx\uart_rx.h</FilePath>
+            </File>
+            <File>
+              <FileName>app_network.local.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\app\app_network.local.h</FilePath>
+            </File>
+            <File>
+              <FileName>app_network_config.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\app\app_network_config.h</FilePath>
             </File>
           </Files>
         </Group>

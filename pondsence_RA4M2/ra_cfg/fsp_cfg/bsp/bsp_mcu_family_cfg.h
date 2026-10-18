@@ -87,9 +87,9 @@ extern "C" {
             (((RA_NOT_DEFINED > 0) ? 0U : 1U) << 26) /* SCI5 */ | \
             (((RA_NOT_DEFINED > 0) ? 0U : 1U) << 27) /* SCI4 */ | \
             (((RA_NOT_DEFINED > 0) ? 0U : 1U) << 28) /* SCI3 */ | \
-            (((RA_NOT_DEFINED > 0) ? 0U : 1U) << 29) /* SCI2 */ | \
+            (((1 > 0) ? 0U : 1U) << 29) /* SCI2 */ | \
             (((RA_NOT_DEFINED > 0) ? 0U : 1U) << 30) /* SCI1 */ | \
-            (((RA_NOT_DEFINED > 0) ? 0U : 1U) << 31) /* SCI0 */ | \
+            (((1 > 0) ? 0U : 1U) << 31) /* SCI0 */ | \
             0x33f4f9) /* Unused */
 #endif
 #ifndef BSP_TZ_CFG_PSARC

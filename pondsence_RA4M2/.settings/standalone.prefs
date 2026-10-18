@@ -1,4 +1,4 @@
-#Sat Oct 17 17:53:15 CST 2026
+#Sun Oct 18 17:09:27 CST 2026
 com.renesas.cdt.ddsc.content/com.renesas.cdt.ddsc.content.defaultlinkerscript=script/fsp.scat
 com.renesas.cdt.ddsc.contentgen.options/options/suppresswarningspaths=ra/arm
 com.renesas.cdt.ddsc.contentgen.options/options/toolchainversion=
@@ -24,9 +24,13 @@ com.renesas.cdt.ddsc.packs.componentfiles/Renesas\#\#HAL\ Drivers\#\#all\#\#r_ag
 com.renesas.cdt.ddsc.packs.componentfiles/Renesas\#\#HAL\ Drivers\#\#all\#\#r_agt\#\#\#\#6.6.0/libraries=
 com.renesas.cdt.ddsc.packs.componentfiles/Renesas\#\#HAL\ Drivers\#\#all\#\#r_ioport\#\#\#\#6.6.0/all=1630225429,ra/fsp/inc/api/r_ioport_api.h|1676708329,ra/fsp/inc/instances/r_ioport.h|557850714,ra/fsp/src/r_ioport/r_ioport.c
 com.renesas.cdt.ddsc.packs.componentfiles/Renesas\#\#HAL\ Drivers\#\#all\#\#r_ioport\#\#\#\#6.6.0/libraries=
+com.renesas.cdt.ddsc.packs.componentfiles/Renesas\#\#HAL\ Drivers\#\#all\#\#r_sci_uart\#\#\#\#6.6.0/all=3412164478,ra/fsp/inc/api/r_transfer_api.h|1934728291,ra/fsp/inc/api/r_uart_api.h|761424587,ra/fsp/inc/instances/r_sci_uart.h|3439005140,ra/fsp/src/r_sci_uart/r_sci_uart.c
+com.renesas.cdt.ddsc.packs.componentfiles/Renesas\#\#HAL\ Drivers\#\#all\#\#r_sci_uart\#\#\#\#6.6.0/libraries=
 com.renesas.cdt.ddsc.packs.componentfiles/Renesas\#\#Projects\#\#all\#\#common\#\#\#\#6.6.0/all=
 com.renesas.cdt.ddsc.packs.componentfiles/Renesas\#\#Projects\#\#all\#\#common\#\#\#\#6.6.0/libraries=
 com.renesas.cdt.ddsc.project.standalone.projectgenerationoptions/ideProjectType=KEIL
 com.renesas.cdt.ddsc.project.standalone.projectgenerationoptions/isCpp=false
 com.renesas.cdt.ddsc.settingseditor/com.renesas.cdt.ddsc.settingseditor.active_page=PinConfiguration
 com.renesas.cdt.ddsc.threads.configurator/collapse/module.driver.i2c_on_iic_master.1763365731=false
+com.renesas.cdt.ddsc.threads.configurator/collapse/module.driver.uart_on_sci_uart.1694792121=false
+com.renesas.cdt.ddsc.threads.configurator/collapse/module.driver.uart_on_sci_uart.1709576277=false

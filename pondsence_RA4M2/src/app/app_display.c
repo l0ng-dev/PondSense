@@ -5,6 +5,7 @@
 #include "app_display.h"
 
 #include <stddef.h>
+#include <stdio.h>
 
 #include "../modules/ssd1306/ssd1306.h"
 
@@ -14,6 +15,7 @@ static uint32_t s_oled_last_update_ms;
 static bool s_oled_updated;
 static uint16_t s_oled_last_ph_centi;
 static bool s_oled_last_ph_valid;
+static uint32_t s_oled_last_ph_sample_count;
 
 /* 数值占七个字符并右对齐，正数不显示加号，单位由界面单独绘制。
  * 温度与 pH 的小数点使用同一列；调用方传入百分之一单位的幅值。 */
@@ -40,9 +42,47 @@ static void app_format_centi(char output[8], uint16_t magnitude, bool negative)
     }
 }
 
+static void app_display_feeding(app_feeding_status_t const * feeding)
+{
+    char status[17];
+    char last_level[8] = "LAST:--";
+
+    switch (feeding->state)
+    {
+        case APP_FEED_WAIT_KEY:
+            (void) snprintf(status, sizeof(status), "WAIT K4");
+            break;
+        case APP_FEED_RUNNING:
+            (void) snprintf(status, sizeof(status), "FEED %u/%u",
+                            (unsigned int) feeding->completed_cycles,
+                            (unsigned int) feeding->planned_cycles);
+            break;
+        case APP_FEED_WAIT_RESULT:
+            (void) snprintf(status, sizeof(status), "OBS WAIT");
+            break;
+        case APP_FEED_COMPLETE:
+            (void) snprintf(status, sizeof(status), "DONE");
+            break;
+        case APP_FEED_FAULT_LOCKED:
+        default:
+            (void) snprintf(status, sizeof(status), "FAULT %u", (unsigned int) feeding->fault);
+            break;
+    }
+
+    /* 新批次等待识别时继续显示上一份有效结果，避免把旧等级误作本次结果。 */
+    if ((feeding->result_ready || (feeding->round_count > 0U)) && (feeding->result_level <= 2U))
+    {
+        last_level[5] = (char) ('0' + feeding->result_level);
+        last_level[6] = '\0';
+    }
+    BSP_SSD1306_DrawText(3U, 0U, status);
+    BSP_SSD1306_DrawText(3U, 9U, last_level);
+}
+
 static void app_display_update(uint32_t now_ms,
                                app_temperature_snapshot_t const * temperature,
-                               app_ph_adc_snapshot_t const * ph)
+                               app_ph_adc_snapshot_t const * ph,
+                               app_feeding_status_t const * feeding)
 {
     bool const temperature_error = (APP_TEMPERATURE_ERROR == temperature->state) ||
                                    (APP_TEMPERATURE_TIMEOUT == temperature->state) ||
@@ -54,10 +94,14 @@ static void app_display_update(uint32_t now_ms,
     {
         s_oled_last_ph_valid = false;
     }
-    else if (ph->valid && ph->estimate_ready)
+    else if (ph->sample_count != s_oled_last_ph_sample_count)
     {
-        s_oled_last_ph_centi = ph->estimate_centi;
-        s_oled_last_ph_valid = true;
+        s_oled_last_ph_sample_count = ph->sample_count;
+        s_oled_last_ph_valid = ph->valid && ph->estimate_ready;
+        if (s_oled_last_ph_valid)
+        {
+            s_oled_last_ph_centi = ph->estimate_centi;
+        }
     }
 
     /* 每轮先接收有效估算，再限制绘制频率，避免错过 ADC 的有效结果窗口。 */
@@ -109,15 +153,7 @@ static void app_display_update(uint32_t now_ms,
         }
     }
 
-    char const * status;
-    uint8_t status_column = 3U;
-    if (temperature_error && ph_error) { status = "传感器异常"; }
-    else if (temperature_error) { status = "水温异常"; status_column = 4U; }
-    else if (ph_error) { status = "pH输入异常"; }
-    else if (!s_oled_last_ph_valid) { status = "pH等待稳定"; }
-    else if (ph->calibrated) { status = "pH已校准"; status_column = 4U; }
-    else { status = "* pH未校准"; }
-    BSP_SSD1306_DrawText(3U, status_column, status);
+    app_display_feeding(feeding);
 }
 
 void App_Display_Init(void)
@@ -126,17 +162,19 @@ void App_Display_Init(void)
     s_oled_updated = false;
     s_oled_last_ph_centi = 0U;
     s_oled_last_ph_valid = false;
+    s_oled_last_ph_sample_count = 0U;
     BSP_SSD1306_Init();
 }
 
 void App_Display_Process(uint32_t now_ms,
                          app_temperature_snapshot_t const * temperature,
-                         app_ph_adc_snapshot_t const * ph)
+                         app_ph_adc_snapshot_t const * ph,
+                         app_feeding_status_t const * feeding)
 {
-    if ((NULL == temperature) || (NULL == ph))
+    if ((NULL == temperature) || (NULL == ph) || (NULL == feeding))
     {
         return;
     }
-    app_display_update(now_ms, temperature, ph);
+    app_display_update(now_ms, temperature, ph, feeding);
     BSP_SSD1306_Process(now_ms);
 }

@@ -29,6 +29,8 @@ typedef enum
 } oled_phase_t;
 
 static uint8_t s_frame[OLED_WIDTH * OLED_PAGES];
+/* 分块发送期间固定本帧内容；s_frame 可继续接受下一轮绘制。 */
+static uint8_t s_send_frame[OLED_WIDTH * OLED_PAGES];
 static uint8_t s_tx[OLED_DATA_CHUNK + 1U];
 static oled_phase_t s_phase;
 static uint32_t s_phase_since_ms;
@@ -243,6 +245,7 @@ static bool oled_send(uint8_t const * data, uint32_t size, uint32_t now_ms)
 void BSP_SSD1306_Init(void)
 {
     memset(s_frame, 0, sizeof(s_frame));
+    memset(s_send_frame, 0, sizeof(s_send_frame));
     s_phase = OLED_OPEN;
     s_phase_since_ms = 0U;
     s_page = 0U;
@@ -352,6 +355,7 @@ void BSP_SSD1306_Process(uint32_t now_ms)
         case OLED_READY:
             if (s_dirty)
             {
+                memcpy(s_send_frame, s_frame, sizeof(s_frame));
                 s_dirty = false;
                 s_page = 0U;
                 s_phase = OLED_PAGE_COMMAND_SEND;
@@ -370,7 +374,7 @@ void BSP_SSD1306_Process(uint32_t now_ms)
             break;
         case OLED_PAGE_DATA_SEND:
             s_tx[0] = 0x40U;
-            memcpy(&s_tx[1], &s_frame[(uint32_t) s_page * OLED_WIDTH + s_column], OLED_DATA_CHUNK);
+            memcpy(&s_tx[1], &s_send_frame[(uint32_t) s_page * OLED_WIDTH + s_column], OLED_DATA_CHUNK);
             if (oled_send(s_tx, sizeof(s_tx), now_ms))
             {
                 s_column = (uint8_t) (s_column + OLED_DATA_CHUNK);

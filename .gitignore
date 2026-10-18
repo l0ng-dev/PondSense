@@ -21,3 +21,6 @@
 
 # Local RASC text report
 /pondsence_RA4M2/ra_cfg.txt
+
+# Local Wi-Fi and MQTT credentials
+/pondsence_RA4M2/src/app/app_network.local.h
