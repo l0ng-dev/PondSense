@@ -1,6 +1,6 @@
 /**
  * @file sensing.c
- * @brief 调度温度与 pH ADC 采样状态机及未校准临时估算。
+ * @brief 调度温度与 pH ADC 采样状态机及未校准 pH 估算。
  */
 #include "sensing.h"
 
@@ -19,7 +19,7 @@
 #define APP_PH_MAX_VALUE           14.0f
 #define APP_PH_CENTI_SCALE         100.0f
 
-/* F407 sensing.c 的临时估算参数；尚未在 RA 信号链上校准。 */
+/* 旧 F407 工程的参数已用于当前 pH 估算；RA 信号链尚未用标准液标定。 */
 #define APP_PH_REFERENCE_ADC       1539.0f
 #define APP_PH_REFERENCE_VALUE     6.8f
 #define APP_PH_ADC_REFERENCE_V     3.3f

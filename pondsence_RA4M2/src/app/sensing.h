@@ -41,7 +41,7 @@ typedef enum
 } app_ph_adc_state_t;
 
 /* 仅由主循环写入；valid 为 false 时 raw 为上次成功的原始 ADC 值。
- * estimate_centi 只作未校准的临时估算；只有 estimate_ready 为 true 时可读取。 */
+ * estimate_centi 为当前固件使用的未标定估算值；仅 estimate_ready 为 true 时可读取。 */
 typedef struct
 {
     uint16_t raw;

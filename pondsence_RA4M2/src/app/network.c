@@ -149,7 +149,7 @@ static void network_mqtt_handle_packet(uint8_t const * packet,
     }
     if ((2U == type) && (APP_NETWORK_MQTT_WAIT_CONNACK == g_app_network.state))
     {
-        /* 巴法云可能置 Session Present；F407 仅以返回码判断成功。 */
+        /* 允许 Session Present=1；以 CONNACK 返回码判断连接是否成功。 */
         if ((2U != remaining) || (body[0] > 1U))
         {
             network_backoff(APP_NETWORK_ERROR_MQTT_PACKET);
