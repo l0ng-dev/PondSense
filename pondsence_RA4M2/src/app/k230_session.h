@@ -2,7 +2,6 @@
 #define APP_K230_H
 
 #include <stdint.h>
-#include <stdbool.h>
 
 #include "bsp_api.h"
 #include "../protocol/k230/k230.h"
@@ -48,6 +47,6 @@ extern app_k230_status_t g_app_k230;
 
 void App_K230_Init(void);
 fsp_err_t App_K230_StartObserve(uint32_t now_ms);
-void App_K230_Process(uint32_t now_ms, bool manual_allowed);
+void App_K230_Process(uint32_t now_ms);
 
 #endif

@@ -101,3 +101,35 @@ void BSP_FeedMotor_Process(uint32_t now_ms)
         (void) BSP_FeedMotor_Stop();
     }
 }
+
+static void feed_motor_fault_stop(void)
+{
+    __disable_irq();
+    R_PORT5->PCNTR3 = (1UL << 16U);
+    R_PORT4->PCNTR3 = (1UL << 18U);
+    BSP_CFG_HANDLE_UNRECOVERABLE_ERROR(0);
+    for (;;)
+    {
+        __WFI();
+    }
+}
+
+void HardFault_Handler(void)
+{
+    feed_motor_fault_stop();
+}
+
+void MemManage_Handler(void)
+{
+    feed_motor_fault_stop();
+}
+
+void BusFault_Handler(void)
+{
+    feed_motor_fault_stop();
+}
+
+void UsageFault_Handler(void)
+{
+    feed_motor_fault_stop();
+}

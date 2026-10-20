@@ -1,16 +1,10 @@
 /**
- * @file app_main.c
- * @brief 调度温度与 pH ADC 采样状态机、未校准临时估算及显示层调用。
+ * @file sensing.c
+ * @brief 调度温度与 pH ADC 采样状态机及未校准临时估算。
  */
-#include "app_main.h"
+#include "sensing.h"
 
 #include "hal_data.h"
-#include "app_display.h"
-#include "app_k230.h"
-#include "app_network.h"
-#include "app_feeding.h"
-#include "../modules/feed_motor/feed_motor.h"
-#include "../modules/uart_rx/uart_rx.h"
 
 #define APP_TEMPERATURE_PERIOD_MS  1000U
 #define APP_CONVERSION_TIMEOUT_MS  1000U
@@ -30,9 +24,6 @@
 #define APP_PH_REFERENCE_VALUE     6.8f
 #define APP_PH_ADC_REFERENCE_V     3.3f
 #define APP_PH_NOMINAL_SLOPE_PER_V (-5.6342f)
-
-static volatile uint32_t s_uptime_ms;
-
 typedef struct
 {
     bsp_ds18b20_t sensor;
@@ -70,16 +61,6 @@ app_ph_adc_snapshot_t g_app_ph_adc =
 {
     .state = APP_PH_ADC_NO_SAMPLE
 };
-
-/* AGT0 中断更新毫秒计数，并检查电机硬停机期限。 */
-void app_tick_callback(timer_callback_args_t * p_args)
-{
-    if ((NULL != p_args) && (TIMER_EVENT_CYCLE_END == p_args->event))
-    {
-        ++s_uptime_ms;
-        BSP_FeedMotor_Process(s_uptime_ms);
-    }
-}
 
 static void app_ph_filter_reset(void)
 {
@@ -345,41 +326,8 @@ static void app_ph_adc_process(uint32_t now_ms)
     }
 }
 
-void App_Main(void)
+void App_Sensing_Process(uint32_t now_ms)
 {
-    /* IOPORT 已由 FSP 启动流程打开；先将两路电机输入再次置低。
-     * 初始化失败保留在 g_feed_motor_status，启动请求会被拒绝。 */
-    (void) BSP_FeedMotor_Init();
-
-    fsp_err_t result = R_AGT_Open(&g_tick_timer_ctrl, &g_tick_timer_cfg);
-    if (FSP_SUCCESS == result)
-    {
-        result = R_AGT_Start(&g_tick_timer_ctrl);
-    }
-    if (FSP_SUCCESS != result)
-    {
-        g_app_temperature.state = APP_TEMPERATURE_TIMEBASE_ERROR;
-        for (;;)
-        {
-            __WFI();
-        }
-    }
-
-    App_Display_Init();
-    Uart_Rx_Init();
-    App_K230_Init();
-    App_Feeding_Init();
-    App_Network_Init(s_uptime_ms);
-
-    for (;;)
-    {
-        app_temperature_process(s_uptime_ms);
-        app_ph_adc_process(s_uptime_ms);
-        App_Network_Process(s_uptime_ms);
-        Uart_Rx_Process();
-        App_Feeding_Process(s_uptime_ms);
-        App_K230_Process(s_uptime_ms, App_Feeding_ManualK230Allowed());
-        App_Display_Process(s_uptime_ms, &g_app_temperature, &g_app_ph_adc, &g_app_feeding);
-        __WFI();
-    }
+    app_temperature_process(now_ms);
+    app_ph_adc_process(now_ms);
 }

@@ -1,5 +1,25 @@
 /* generated HAL source file - do not edit */
 #include "hal_data.h"
+iwdt_instance_ctrl_t g_iwdt0_ctrl;
+
+const wdt_cfg_t g_iwdt0_cfg =
+{
+    .timeout = (wdt_timeout_t) 0,
+    .clock_division = (wdt_clock_division_t) 0,
+    .window_start = (wdt_window_start_t) 0,
+    .window_end = (wdt_window_end_t) 0,
+    .reset_control = (wdt_reset_control_t) 0,
+    .stop_control = (wdt_stop_control_t) 0,
+    .p_callback = NULL,
+};
+
+/* Instance structure to use this module. */
+const wdt_instance_t g_iwdt0 =
+{
+    .p_ctrl        = &g_iwdt0_ctrl,
+    .p_cfg         = &g_iwdt0_cfg,
+    .p_api         = &g_wdt_on_iwdt
+};
 sci_uart_instance_ctrl_t     g_uart_k230_ctrl;
 
             baud_setting_t               g_uart_k230_baud_setting =

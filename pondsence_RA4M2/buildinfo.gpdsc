@@ -11,18 +11,19 @@
     <generator id="Renesas RA Smart Configurator">
       <project_files>
         <file category="include" name="src/"/>
-        <file category="source" name="src/app/app_display.c"/>
-        <file category="header" name="src/app/app_display.h" path=""/>
-        <file category="source" name="src/app/app_feeding.c"/>
-        <file category="header" name="src/app/app_feeding.h" path=""/>
-        <file category="source" name="src/app/app_k230.c"/>
-        <file category="header" name="src/app/app_k230.h" path=""/>
-        <file category="source" name="src/app/app_main.c"/>
-        <file category="header" name="src/app/app_main.h" path=""/>
-        <file category="source" name="src/app/app_network.c"/>
-        <file category="header" name="src/app/app_network.h" path=""/>
-        <file category="header" name="src/app/app_network.local.h" path=""/>
-        <file category="header" name="src/app/app_network_config.h" path=""/>
+        <file category="source" name="src/app/display.c"/>
+        <file category="header" name="src/app/display.h" path=""/>
+        <file category="source" name="src/app/feeding.c"/>
+        <file category="header" name="src/app/feeding.h" path=""/>
+        <file category="source" name="src/app/k230_session.c"/>
+        <file category="header" name="src/app/k230_session.h" path=""/>
+        <file category="source" name="src/app/network.c"/>
+        <file category="header" name="src/app/network.h" path=""/>
+        <file category="header" name="src/app/network_config.h" path=""/>
+        <file category="source" name="src/app/runtime.c"/>
+        <file category="header" name="src/app/runtime.h" path=""/>
+        <file category="source" name="src/app/sensing.c"/>
+        <file category="header" name="src/app/sensing.h" path=""/>
         <file category="source" name="src/hal_entry.c"/>
         <file category="source" name="src/hal_warmstart.c"/>
         <file category="source" name="src/modules/ds18b20/ds18b20.c"/>
@@ -32,10 +33,12 @@
         <file category="source" name="src/modules/ssd1306/ssd1306.c"/>
         <file category="header" name="src/modules/ssd1306/ssd1306.h" path=""/>
         <file category="header" name="src/modules/ssd1306/ssd1306_font.h" path=""/>
-        <file category="source" name="src/modules/uart_rx/uart_rx.c"/>
-        <file category="header" name="src/modules/uart_rx/uart_rx.h" path=""/>
+        <file category="source" name="src/modules/uart_links/uart_links.c"/>
+        <file category="header" name="src/modules/uart_links/uart_links.h" path=""/>
         <file category="source" name="src/protocol/k230/k230.c"/>
         <file category="header" name="src/protocol/k230/k230.h" path=""/>
+        <file category="source" name="src/protocol/mqtt/mqtt_codec.c"/>
+        <file category="header" name="src/protocol/mqtt/mqtt_codec.h" path=""/>
       </project_files>
     </generator>
   </generators>
@@ -96,11 +99,13 @@
         <file category="header" name="ra/fsp/inc/api/r_timer_api.h" path=""/>
         <file category="header" name="ra/fsp/inc/api/r_transfer_api.h" path=""/>
         <file category="header" name="ra/fsp/inc/api/r_uart_api.h" path=""/>
+        <file category="header" name="ra/fsp/inc/api/r_wdt_api.h" path=""/>
         <file category="header" name="ra/fsp/inc/fsp_features.h" path=""/>
         <file category="header" name="ra/fsp/inc/fsp_version.h" path=""/>
         <file category="header" name="ra/fsp/inc/instances/r_adc.h" path=""/>
         <file category="header" name="ra/fsp/inc/instances/r_agt.h" path=""/>
         <file category="header" name="ra/fsp/inc/instances/r_ioport.h" path=""/>
+        <file category="header" name="ra/fsp/inc/instances/r_iwdt.h" path=""/>
         <file category="header" name="ra/fsp/inc/instances/r_sci_uart.h" path=""/>
         <file category="header" name="ra/fsp/src/bsp/cmsis/Device/RENESAS/Include/R7FA4M2AD.h" path=""/>
         <file category="header" name="ra/fsp/src/bsp/cmsis/Device/RENESAS/Include/renesas.h" path=""/>
@@ -148,6 +153,7 @@
         <file category="source" name="ra/fsp/src/r_adc/r_adc.c"/>
         <file category="source" name="ra/fsp/src/r_agt/r_agt.c"/>
         <file category="source" name="ra/fsp/src/r_ioport/r_ioport.c"/>
+        <file category="source" name="ra/fsp/src/r_iwdt/r_iwdt.c"/>
         <file category="source" name="ra/fsp/src/r_sci_uart/r_sci_uart.c"/>
       </files>
     </component>
@@ -165,6 +171,7 @@
         <file category="header" name="ra_cfg/fsp_cfg/r_adc_cfg.h" path=""/>
         <file category="header" name="ra_cfg/fsp_cfg/r_agt_cfg.h" path=""/>
         <file category="header" name="ra_cfg/fsp_cfg/r_ioport_cfg.h" path=""/>
+        <file category="header" name="ra_cfg/fsp_cfg/r_iwdt_cfg.h" path=""/>
         <file category="header" name="ra_cfg/fsp_cfg/r_sci_uart_cfg.h" path=""/>
       </files>
     </component>

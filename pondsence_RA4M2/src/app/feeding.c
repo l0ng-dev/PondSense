@@ -1,7 +1,7 @@
-#include "app_feeding.h"
+#include "feeding.h"
 
 #include "hal_data.h"
-#include "app_k230.h"
+#include "k230_session.h"
 #include "../modules/feed_motor/feed_motor.h"
 
 #define FEED_CYCLE_MS          17000U
@@ -93,14 +93,6 @@ static void feeding_key_process(uint32_t now_ms)
         (APP_FEED_WAIT_KEY == g_app_feeding.state))
     {
         ++g_app_feeding.key_press_count;
-        if ((APP_K230_IDLE != g_app_k230.state) &&
-            (APP_K230_COMPLETE != g_app_k230.state) &&
-            (APP_K230_TIMED_OUT != g_app_k230.state) &&
-            (APP_K230_REJECTED != g_app_k230.state) &&
-            (APP_K230_SEND_ERROR != g_app_k230.state))
-        {
-            return; /* 手动诊断事务尚在进行，本次按键不启动投喂。 */
-        }
         s_unlocked = true;
         feeding_start_batch(1U, now_ms);
     }
@@ -234,9 +226,4 @@ void App_Feeding_Process(uint32_t now_ms)
             }
         }
     }
-}
-
-bool App_Feeding_ManualK230Allowed(void)
-{
-    return APP_FEED_WAIT_KEY == g_app_feeding.state;
 }

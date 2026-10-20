@@ -1,3 +1,0 @@
-# RASC version and installation file
-Unknown
-D:\Renesas\eclipse\rascc.exe

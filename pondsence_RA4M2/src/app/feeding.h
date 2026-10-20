@@ -45,6 +45,5 @@ extern app_feeding_status_t g_app_feeding;
 
 void App_Feeding_Init(void);
 void App_Feeding_Process(uint32_t now_ms);
-bool App_Feeding_ManualK230Allowed(void);
 
 #endif

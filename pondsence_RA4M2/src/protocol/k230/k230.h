@@ -48,6 +48,7 @@ int PondSense_K230_FormatObserve(char *buffer,
                                  uint32_t event_id);
 PondSense_K230_ParseStatusTypeDef PondSense_K230_ParseFrame(
     const char *line,
+    size_t line_length, /* 不含换行；允许末尾单个 '\r'。 */
     PondSense_K230_FrameTypeDefData *frame);
 
 #endif

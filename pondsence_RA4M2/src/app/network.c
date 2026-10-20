@@ -1,14 +1,15 @@
-#include "app_network.h"
+#include "network.h"
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 
-#include "app_k230.h"
-#include "app_main.h"
-#include "app_network_config.h"
-#include "../modules/uart_rx/uart_rx.h"
+#include "k230_session.h"
+#include "sensing.h"
+#include "network_config.h"
+#include "../modules/uart_links/uart_links.h"
+#include "../protocol/mqtt/mqtt_codec.h"
 
 #define NETWORK_LINE_CAPACITY       192U
 #define NETWORK_PACKET_CAPACITY     256U
@@ -19,6 +20,7 @@
 #define NETWORK_TCP_TIMEOUT_MS      10000U
 #define NETWORK_SEND_TIMEOUT_MS      3000U
 #define NETWORK_MQTT_TIMEOUT_MS      5000U
+#define NETWORK_MQTT_SKIP_TIMEOUT_MS 5000U
 #define NETWORK_PING_INTERVAL_MS    30000U
 
 app_network_status_t g_app_network;
@@ -27,12 +29,16 @@ static char s_line[NETWORK_LINE_CAPACITY];
 static uint16_t s_line_length;
 static bool s_line_discard;
 static uint32_t s_ipd_remaining;
-static bool s_ipd_discard;
 static uint8_t s_mqtt_rx[NETWORK_MQTT_RX_CAPACITY];
 static uint16_t s_mqtt_rx_length;
+static uint32_t s_mqtt_skip_remaining;
+static uint32_t s_mqtt_skip_start_ms;
 static uint8_t s_packet[NETWORK_PACKET_CAPACITY];
 static uint16_t s_packet_length;
 static uint8_t s_packet_phase; /* 0: 未发 CIPSEND；1: 等 >；2: 等 SEND OK。 */
+static bool s_early_ack_pending;
+static uint8_t s_early_ack_packet[4]; /* 固定头与最多 3 字节应答内容。 */
+static uint16_t s_early_ack_remaining;
 static bool s_prompt_seen;
 static bool s_command_waiting;
 static uint32_t s_deadline_ms;
@@ -97,14 +103,16 @@ static void network_backoff(app_network_error_t error)
     s_line_length = 0U;
     s_line_discard = false;
     s_ipd_remaining = 0U;
-    s_ipd_discard = false;
     s_mqtt_rx_length = 0U;
+    s_mqtt_skip_remaining = 0U;
+    s_mqtt_skip_start_ms = 0U;
+    s_early_ack_pending = false;
     network_set_state(APP_NETWORK_BACKOFF);
 }
 
 static void network_send_command(char const * command, uint32_t timeout_ms)
 {
-    fsp_err_t const result = Uart_Rx_EspWrite((uint8_t const *) command,
+    fsp_err_t const result = Uart_Links_EspWrite((uint8_t const *) command,
                                                (uint16_t) strlen(command));
     if (FSP_ERR_IN_USE == result)
     {
@@ -120,111 +128,25 @@ static void network_send_command(char const * command, uint32_t timeout_ms)
     s_deadline_ms = s_now_ms + timeout_ms;
 }
 
-static uint16_t network_mqtt_write_string(uint8_t * buffer,
-                                           uint16_t offset,
-                                           char const * value)
-{
-    size_t const length = strlen(value);
-    if ((length > UINT16_MAX) ||
-        ((uint32_t) offset + 2U + length > NETWORK_PACKET_CAPACITY))
-    {
-        return 0U;
-    }
-    buffer[offset++] = (uint8_t) (length >> 8);
-    buffer[offset++] = (uint8_t) length;
-    memcpy(&buffer[offset], value, length);
-    return (uint16_t) (offset + length);
-}
-
-static uint16_t network_mqtt_header(uint8_t packet_type, uint32_t remaining)
-{
-    uint16_t index = 0U;
-    s_packet[index++] = packet_type;
-    do
-    {
-        uint8_t digit = (uint8_t) (remaining % 128U);
-        remaining /= 128U;
-        if (remaining > 0U)
-        {
-            digit |= 0x80U;
-        }
-        s_packet[index++] = digit;
-    } while ((remaining > 0U) && (index < 5U));
-    return index;
-}
-
-static uint16_t network_mqtt_build_connect(void)
-{
-    size_t const client_length = strlen(APP_NETWORK_MQTT_CLIENT_ID);
-    uint32_t const remaining = (uint32_t) (12U + client_length);
-    if ((remaining + 5U > sizeof(s_packet)) || (client_length > UINT16_MAX))
-    {
-        return 0U;
-    }
-    uint16_t index = network_mqtt_header(0x10U, remaining);
-    static uint8_t const variable_header[] = {
-        0x00U, 0x04U, 'M', 'Q', 'T', 'T', 0x04U, 0x02U, 0x00U, 60U
-    };
-    memcpy(&s_packet[index], variable_header, sizeof(variable_header));
-    index += (uint16_t) sizeof(variable_header);
-    return network_mqtt_write_string(s_packet, index, APP_NETWORK_MQTT_CLIENT_ID);
-}
-
-static uint16_t network_mqtt_build_subscribe(void)
-{
-    size_t const topic_length = strlen(APP_NETWORK_MQTT_TOPIC);
-    uint32_t const remaining = (uint32_t) (5U + topic_length);
-    if (remaining + 5U > sizeof(s_packet))
-    {
-        return 0U;
-    }
-    if (++s_packet_id == 0U)
-    {
-        s_packet_id = 1U;
-    }
-    uint16_t index = network_mqtt_header(0x82U, remaining);
-    s_packet[index++] = (uint8_t) (s_packet_id >> 8);
-    s_packet[index++] = (uint8_t) s_packet_id;
-    index = network_mqtt_write_string(s_packet, index, APP_NETWORK_MQTT_TOPIC);
-    if (0U != index)
-    {
-        s_packet[index++] = 0U;
-    }
-    return index;
-}
-
-static uint16_t network_mqtt_build_publish(void)
-{
-    char topic[64];
-    int const topic_written = snprintf(topic, sizeof(topic), "%s/up",
-                                       APP_NETWORK_MQTT_TOPIC);
-    if ((topic_written <= 0) || ((size_t) topic_written >= sizeof(topic)))
-    {
-        return 0U;
-    }
-    size_t const payload_length = strlen(s_payload);
-    uint32_t const remaining = (uint32_t) (2U + (size_t) topic_written +
-                                            payload_length);
-    if (remaining + 5U > sizeof(s_packet))
-    {
-        return 0U;
-    }
-    uint16_t index = network_mqtt_header(0x30U, remaining);
-    index = network_mqtt_write_string(s_packet, index, topic);
-    if (0U == index)
-    {
-        return 0U;
-    }
-    memcpy(&s_packet[index], s_payload, payload_length);
-    return (uint16_t) (index + payload_length);
-}
-
 static void network_mqtt_handle_packet(uint8_t const * packet,
                                         uint16_t header_length,
                                         uint16_t remaining)
 {
     uint8_t const type = (uint8_t) (packet[0] >> 4);
     uint8_t const * body = &packet[header_length];
+    if ((2U == s_packet_phase) &&
+        (((2U == type) && (APP_NETWORK_MQTT_SEND_CONNECT == g_app_network.state)) ||
+         ((9U == type) && (APP_NETWORK_MQTT_SEND_SUBSCRIBE == g_app_network.state)) ||
+         ((13U == type) && (APP_NETWORK_MQTT_SEND_PING == g_app_network.state))))
+    {
+        /* ESP 可能先交付 +IPD，再报告 SEND OK；应答留到发送确认后处理。 */
+        s_early_ack_packet[0] = packet[0];
+        uint16_t const copy_length = (remaining < 3U) ? remaining : 3U;
+        memcpy(&s_early_ack_packet[1], body, copy_length);
+        s_early_ack_remaining = remaining;
+        s_early_ack_pending = true;
+        return;
+    }
     if ((2U == type) && (APP_NETWORK_MQTT_WAIT_CONNACK == g_app_network.state))
     {
         /* 巴法云可能置 Session Present；F407 仅以返回码判断成功。 */
@@ -265,7 +187,14 @@ static void network_mqtt_handle_packet(uint8_t const * packet,
     }
     else if ((13U == type) && (APP_NETWORK_MQTT_WAIT_PINGRESP == g_app_network.state))
     {
-        network_set_state(APP_NETWORK_ONLINE);
+        if ((0xD0U != packet[0]) || (0U != remaining))
+        {
+            network_backoff(APP_NETWORK_ERROR_MQTT_PACKET);
+        }
+        else
+        {
+            network_set_state(APP_NETWORK_ONLINE);
+        }
     }
     else if ((3U == type) && (remaining >= 2U))
     {
@@ -290,6 +219,11 @@ static void network_mqtt_handle_packet(uint8_t const * packet,
 
 static void network_mqtt_receive_byte(uint8_t value)
 {
+    if (s_mqtt_skip_remaining > 0U)
+    {
+        --s_mqtt_skip_remaining;
+        return;
+    }
     if (s_mqtt_rx_length >= sizeof(s_mqtt_rx))
     {
         ++g_app_network.rx_overflow_count;
@@ -299,32 +233,33 @@ static void network_mqtt_receive_byte(uint8_t value)
     s_mqtt_rx[s_mqtt_rx_length++] = value;
     while (s_mqtt_rx_length >= 2U)
     {
-        uint32_t remaining = 0U;
-        uint32_t multiplier = 1U;
-        uint16_t header_length = 1U;
-        uint8_t digit;
-        do
+        uint32_t packet_length;
+        uint16_t header_length;
+        uint32_t remaining;
+        pondsense_mqtt_frame_status_t const frame_status = PondSense_Mqtt_PeekFrame(
+            s_mqtt_rx, s_mqtt_rx_length, sizeof(s_mqtt_rx),
+            &packet_length, &header_length, &remaining);
+        if (PONDSENSE_MQTT_FRAME_OVERSIZE == frame_status)
         {
-            if (header_length >= s_mqtt_rx_length)
+            if (((s_mqtt_rx[0] & 0xF0U) == 0x30U) &&
+                ((s_mqtt_rx[0] & 0x06U) == 0U))
             {
+                /* QoS 0 下行只用于展示；跳过本帧后继续解析同一 TCP 流。 */
+                s_mqtt_skip_remaining = packet_length - s_mqtt_rx_length;
+                s_mqtt_skip_start_ms = s_now_ms;
+                s_mqtt_rx_length = 0U;
+                ++g_app_network.mqtt_oversize_publish_count;
                 return;
             }
-            if (header_length > 4U)
-            {
-                network_backoff(APP_NETWORK_ERROR_MQTT_PACKET);
-                return;
-            }
-            digit = s_mqtt_rx[header_length++];
-            remaining += (uint32_t) (digit & 0x7FU) * multiplier;
-            multiplier *= 128U;
-        } while (0U != (digit & 0x80U));
-        uint32_t const packet_length = header_length + remaining;
-        if (packet_length > sizeof(s_mqtt_rx))
+            network_backoff(APP_NETWORK_ERROR_MQTT_PACKET);
+            return;
+        }
+        if (PONDSENSE_MQTT_FRAME_INVALID == frame_status)
         {
             network_backoff(APP_NETWORK_ERROR_MQTT_PACKET);
             return;
         }
-        if (packet_length > s_mqtt_rx_length)
+        if (PONDSENSE_MQTT_FRAME_INCOMPLETE == frame_status)
         {
             return;
         }
@@ -395,6 +330,11 @@ static void network_packet_send_succeeded(void)
             return;
     }
     s_deadline_ms = s_now_ms + NETWORK_MQTT_TIMEOUT_MS;
+    if (s_early_ack_pending)
+    {
+        s_early_ack_pending = false;
+        network_mqtt_handle_packet(s_early_ack_packet, 1U, s_early_ack_remaining);
+    }
 }
 
 static void network_handle_line(char const * line)
@@ -500,10 +440,7 @@ static void network_receive_byte(uint8_t value)
     if (s_ipd_remaining > 0U)
     {
         --s_ipd_remaining;
-        if (!s_ipd_discard)
-        {
-            network_mqtt_receive_byte(value);
-        }
+        network_mqtt_receive_byte(value);
         return;
     }
     if (('>' == value) && (1U == s_packet_phase))
@@ -536,12 +473,6 @@ static void network_receive_byte(uint8_t value)
             return;
         }
         s_ipd_remaining = length;
-        s_ipd_discard = (length > NETWORK_MQTT_RX_CAPACITY);
-        if (s_ipd_discard)
-        {
-            ++g_app_network.rx_overflow_count;
-            g_app_network.last_error = APP_NETWORK_ERROR_RX_OVERFLOW;
-        }
         s_line_length = 0U;
         return;
     }
@@ -567,18 +498,30 @@ static void network_start_packet_send(void)
         switch (g_app_network.state)
         {
             case APP_NETWORK_MQTT_SEND_CONNECT:
-                s_packet_length = network_mqtt_build_connect();
+                s_packet_length = PondSense_Mqtt_BuildConnect(
+                    s_packet, sizeof(s_packet), APP_NETWORK_MQTT_CLIENT_ID);
                 break;
             case APP_NETWORK_MQTT_SEND_SUBSCRIBE:
-                s_packet_length = network_mqtt_build_subscribe();
+                if (++s_packet_id == 0U)
+                {
+                    s_packet_id = 1U;
+                }
+                s_packet_length = PondSense_Mqtt_BuildSubscribe(
+                    s_packet, sizeof(s_packet), s_packet_id, APP_NETWORK_MQTT_TOPIC);
                 break;
             case APP_NETWORK_MQTT_SEND_PUBLISH:
-                s_packet_length = network_mqtt_build_publish();
+            {
+                char topic[64];
+                int const written = snprintf(topic, sizeof(topic), "%s/up", APP_NETWORK_MQTT_TOPIC);
+                if ((written > 0) && ((size_t) written < sizeof(topic)))
+                {
+                    s_packet_length = PondSense_Mqtt_BuildPublish(
+                        s_packet, sizeof(s_packet), topic, s_payload);
+                }
                 break;
+            }
             case APP_NETWORK_MQTT_SEND_PING:
-                s_packet[0] = 0xC0U;
-                s_packet[1] = 0U;
-                s_packet_length = 2U;
+                s_packet_length = PondSense_Mqtt_BuildPing(s_packet, sizeof(s_packet));
                 break;
             default:
                 return;
@@ -598,7 +541,7 @@ static void network_start_packet_send(void)
             network_backoff(APP_NETWORK_ERROR_CONFIG);
             return;
         }
-        fsp_err_t const result = Uart_Rx_EspWrite((uint8_t const *) s_command,
+        fsp_err_t const result = Uart_Links_EspWrite((uint8_t const *) s_command,
                                                    (uint16_t) length);
         if (FSP_ERR_IN_USE == result)
         {
@@ -615,7 +558,7 @@ static void network_start_packet_send(void)
     }
     else if ((1U == s_packet_phase) && s_prompt_seen)
     {
-        fsp_err_t const result = Uart_Rx_EspWrite(s_packet, s_packet_length);
+        fsp_err_t const result = Uart_Links_EspWrite(s_packet, s_packet_length);
         if (FSP_ERR_IN_USE == result)
         {
             return;
@@ -687,7 +630,7 @@ void App_Network_Init(uint32_t now_ms)
     s_rx_drops_seen = g_uart_esp_rx.ring_drops;
     s_rx_faults_seen = g_uart_esp_rx.rx_faults;
     s_next_action_ms = now_ms + 2000U;
-    Uart_Rx_RegisterEspHandler(network_receive_byte);
+    Uart_Links_RegisterEspHandler(network_receive_byte);
     network_set_state(APP_NETWORK_AT_SYNC);
 }
 
@@ -713,6 +656,13 @@ void App_Network_Process(uint32_t now_ms)
             s_next_action_ms = now_ms;
             network_set_state(APP_NETWORK_AT_SYNC);
         }
+        return;
+    }
+    if ((s_mqtt_skip_remaining > 0U) &&
+        ((uint32_t) (now_ms - s_mqtt_skip_start_ms) >= NETWORK_MQTT_SKIP_TIMEOUT_MS))
+    {
+        ++g_app_network.timeout_count;
+        network_backoff(APP_NETWORK_ERROR_TIMEOUT);
         return;
     }
     if ((s_command_waiting || (s_packet_phase > 0U) ||

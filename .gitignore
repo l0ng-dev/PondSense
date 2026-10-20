@@ -12,6 +12,9 @@
 # RASC generation marker
 /pondsence_RA4M2/output.rasc
 
+# Local RASC installation selection
+/pondsence_RA4M2/rasc_version.txt
+
 # Standalone F407 SPI capture: generated output and local debugger settings
 /tools/F407_SPI_Capture/OBJ/
 /tools/F407_SPI_Capture/PROJECT/*.uvguix.*
@@ -23,4 +26,4 @@
 /pondsence_RA4M2/ra_cfg.txt
 
 # Local Wi-Fi and MQTT credentials
-/pondsence_RA4M2/src/app/app_network.local.h
+/pondsence_RA4M2/src/app/network.local.h

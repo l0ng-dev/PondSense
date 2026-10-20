@@ -1,5 +1,5 @@
 #include "hal_data.h"
-#include "app/app_main.h"
+#include "app/runtime.h"
 
 #if (1 == BSP_MULTICORE_PROJECT) && BSP_TZ_SECURE_BUILD
 bsp_ipc_semaphore_handle_t g_core_start_semaphore =
@@ -14,7 +14,7 @@ bsp_ipc_semaphore_handle_t g_core_start_semaphore =
  **********************************************************************************************************************/
 void hal_entry(void)
 {
-    App_Main();
+    App_Runtime_Run();
 
     /* Wake up 2nd core if this is first core and we are inside a multicore project. */
 #if (0 == _RA_CORE) && (1 == BSP_MULTICORE_PROJECT) && !BSP_TZ_NONSECURE_BUILD

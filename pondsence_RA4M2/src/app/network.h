@@ -53,6 +53,7 @@ typedef struct
     uint32_t reconnect_count;
     uint32_t timeout_count;
     uint32_t rx_overflow_count;
+    uint32_t mqtt_oversize_publish_count;
     uint32_t last_online_ms;
     uint8_t mqtt_connack_code;
     uint8_t mqtt_suback_code;

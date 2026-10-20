@@ -62,7 +62,7 @@
     </config>
     <config id="config.bsp.ra4m2.linker">
       <property id="config.bsp.option_setting.ofs0" value="config.bsp.option_setting.ofs0.enabled"/>
-      <property id="config.bsp.option_setting.ofs0.iwdt_start_mode" value="config.bsp.option_setting.ofs0.iwdt_start_mode.disabled"/>
+      <property id="config.bsp.option_setting.ofs0.iwdt_start_mode" value="config.bsp.option_setting.ofs0.iwdt_start_mode.enabled"/>
       <property id="config.bsp.option_setting.ofs0.iwdt_timeout" value="config.bsp.option_setting.ofs0.iwdt_timeout.2048"/>
       <property id="config.bsp.option_setting.ofs0.iwdt_divisor" value="config.bsp.option_setting.ofs0.iwdt_divisor.128"/>
       <property id="config.bsp.option_setting.ofs0.iwdt_window_end" value="config.bsp.option_setting.ofs0.iwdt_window_end.0"/>
@@ -203,6 +203,10 @@
       <description>SCI UART</description>
       <originalPack>Renesas.RA.6.6.0.pack</originalPack>
     </component>
+    <component apiversion="" class="HAL Drivers" condition="" group="all" subgroup="r_iwdt" variant="" vendor="Renesas" version="6.6.0">
+      <description>Independent Watchdog Timer</description>
+      <originalPack>Renesas.RA.6.6.0.pack</originalPack>
+    </component>
   </raComponentSelection>
   <raElcConfiguration/>
   <raIcuConfiguration/>
@@ -330,12 +334,23 @@
       <property id="module.driver.uart.tei_ipl" value="board.icu.common.irq.priority10"/>
       <property id="module.driver.uart.eri_ipl" value="board.icu.common.irq.priority10"/>
     </module>
+    <module id="module.driver.watchdog_on_iwdt.752131767">
+      <property id="module.driver.watchdog.name" value="g_iwdt0"/>
+      <property id="module.driver.watchdog.timeout" value="enum.driver.iwdt.timeout.disabled"/>
+      <property id="module.driver.watchdog.clock_division" value="enum.driver.iwdt.clock_division.disabled"/>
+      <property id="module.driver.watchdog.window_start" value="enum.driver.iwdt.window_start.disabled"/>
+      <property id="module.driver.watchdog.window_end" value="enum.driver.iwdt.window_end.disabled"/>
+      <property id="module.driver.watchdog.reset_control" value="enum.driver.iwdt.reset_control.disabled"/>
+      <property id="module.driver.watchdog.stop_control" value="enum.driver.iwdt.stop_control.disabled"/>
+      <property id="module.driver.watchdog.nmi_callback" value="NULL"/>
+    </module>
     <context id="_hal.0">
       <stack module="module.driver.timer_on_agt.0"/>
       <stack module="module.driver.ioport_on_ioport.0"/>
       <stack module="module.driver.adc_on_adc.430175089"/>
       <stack module="module.driver.uart_on_sci_uart.1709576277"/>
       <stack module="module.driver.uart_on_sci_uart.1694792121"/>
+      <stack module="module.driver.watchdog_on_iwdt.752131767"/>
     </context>
     <config id="config.driver.adc">
       <property id="config.driver.adc.param_checking_enable" value="config.driver.adc.param_checking_enable.bsp"/>
@@ -347,6 +362,10 @@
       <property id="config.driver.sci_uart.flow_control" value="config.driver.sci_uart.flow_control.disabled"/>
       <property id="config.driver.sci_uart.rs485" value="config.driver.sci_uart.rs485.disabled"/>
       <property id="config.driver.sci_uart.irda" value="config.driver.sci_uart.irda.disabled"/>
+    </config>
+    <config id="config.driver.iwdt">
+      <property id="config.driver.iwdt.param_checking_enable" value="config.driver.iwdt.param_checking_enable.bsp"/>
+      <property id="config.driver.iwdt.register_start_nmi_supported" value="enum.driver.iwdt.register_start_nmi_supported.disabled"/>
     </config>
     <config id="config.driver.ioport">
       <property id="config.driver.ioport.checking" value="config.driver.ioport.checking.system"/>

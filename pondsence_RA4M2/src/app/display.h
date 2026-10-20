@@ -1,8 +1,8 @@
 #ifndef APP_DISPLAY_H
 #define APP_DISPLAY_H
 
-#include "app_main.h"
-#include "app_feeding.h"
+#include "sensing.h"
+#include "feeding.h"
 
 /**
  * @brief 初始化显示层及 OLED 驱动，清空本模块独占的显示缓存。

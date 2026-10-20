@@ -1,5 +1,5 @@
-#ifndef APP_MAIN_H
-#define APP_MAIN_H
+#ifndef APP_SENSING_H
+#define APP_SENSING_H
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -60,6 +60,6 @@ typedef struct
 
 extern app_ph_adc_snapshot_t g_app_ph_adc;
 
-void App_Main(void);
+void App_Sensing_Process(uint32_t now_ms);
 
 #endif

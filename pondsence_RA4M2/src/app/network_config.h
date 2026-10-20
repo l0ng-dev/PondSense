@@ -3,8 +3,8 @@
 
 /* 本地配置包含 Wi-Fi 密码及 MQTT Client ID，已由 .gitignore 排除。 */
 #if defined(__has_include)
-#if __has_include("app_network.local.h")
-#include "app_network.local.h"
+#if __has_include("network.local.h")
+#include "network.local.h"
 #endif
 #endif
 

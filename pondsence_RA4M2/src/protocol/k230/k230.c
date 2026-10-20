@@ -10,7 +10,6 @@
 #include "k230.h"
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 uint8_t PondSense_K230_Crc8(const uint8_t *data, size_t length)
@@ -75,22 +74,30 @@ int PondSense_K230_FormatObserve(char *buffer,
   return frame_length;
 }
 
-/* 严格解析非零事件编号，拒绝空值、溢出和尾随字符。 */
+/* 严格解析十进制整数，拒绝空值、溢出和尾随字符。 */
 static uint8_t parse_u32(const char *text, uint32_t *value)
 {
-  char *end;
-  unsigned long parsed;
+  uint32_t parsed = 0U;
+  const char *cursor = text;
 
   if ((text == NULL) || (*text == '\0') || (value == NULL))
   {
     return 0U;
   }
-  parsed = strtoul(text, &end, 10);
-  if ((*end != '\0') || (parsed == 0UL) || (parsed > 0xFFFFFFFFUL))
+  while (*cursor != '\0')
   {
-    return 0U;
+    if ((*cursor < '0') || (*cursor > '9'))
+    {
+      return 0U;
+    }
+    uint32_t const digit = (uint32_t)(*cursor++ - '0');
+    if (parsed > (UINT32_MAX - digit) / 10U)
+    {
+      return 0U;
+    }
+    parsed = parsed * 10U + digit;
   }
-  *value = (uint32_t)parsed;
+  *value = parsed;
   return 1U;
 }
 
@@ -110,17 +117,19 @@ static int hex_value(char value)
 /**
  * @brief  校验并解析一帧 K230 文本协议。
  * @param  line 以 '$' 开头并带 CRC 的协议行
+ * @param  line_length 协议行的实际字节数，不含换行
  * @param  frame 输出帧数据
  * @retval 解析状态，包括成功、格式错误、CRC 错误和范围错误
  */
 PondSense_K230_ParseStatusTypeDef PondSense_K230_ParseFrame(
     const char *line,
+    size_t line_length,
     PondSense_K230_FrameTypeDefData *frame)
 {
   char payload[PONDSENSE_K230_FRAME_MAX_LENGTH];
   char *fields[7];
   char *cursor;
-  char *asterisk;
+  const char *asterisk;
   size_t payload_length;
   size_t field_count = 0U;
   int crc_high;
@@ -132,15 +141,19 @@ PondSense_K230_ParseStatusTypeDef PondSense_K230_ParseFrame(
     return PONDSENSE_K230_PARSE_ARGUMENT;
   }
   (void)memset(frame, 0, sizeof(*frame));
-  if (line[0] != '$')
+  if ((line_length < 5U) || (line_length >= PONDSENSE_K230_FRAME_MAX_LENGTH) ||
+      (line[0] != '$') || (memchr(line, '\0', line_length) != NULL))
   {
     return PONDSENSE_K230_PARSE_FORMAT;
   }
-  asterisk = strchr(line, '*');
-  if ((asterisk == NULL) || (asterisk <= &line[1]) ||
-      (asterisk[1] == '\0') || (asterisk[2] == '\0') ||
-      ((asterisk[3] != '\0') && (asterisk[3] != '\r') &&
-       (asterisk[3] != '\n')))
+  asterisk = memchr(line, '*', line_length);
+  if ((asterisk == NULL) || (asterisk <= &line[1]))
+  {
+    return PONDSENSE_K230_PARSE_FORMAT;
+  }
+  size_t const suffix_length = line_length - (size_t)(asterisk - line) - 1U;
+  if ((suffix_length != 2U) &&
+      ((suffix_length != 3U) || (asterisk[3] != '\r')))
   {
     return PONDSENSE_K230_PARSE_FORMAT;
   }
@@ -180,7 +193,8 @@ PondSense_K230_ParseStatusTypeDef PondSense_K230_ParseFrame(
   }
   if ((cursor != NULL) || (field_count < 3U) ||
       (strcmp(fields[0], "PS1") != 0) ||
-      (parse_u32(fields[2], &frame->event_id) == 0U))
+      (parse_u32(fields[2], &frame->event_id) == 0U) ||
+      (frame->event_id == 0U))
   {
     return PONDSENSE_K230_PARSE_FORMAT;
   }

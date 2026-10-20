@@ -1,8 +1,8 @@
 /**
- * @file app_display.c
+ * @file display.c
  * @brief 负责 OLED 显示节奏、数值排版及显示缓存。
  */
-#include "app_display.h"
+#include "display.h"
 
 #include <stddef.h>
 #include <stdio.h>
@@ -44,36 +44,48 @@ static void app_format_centi(char output[8], uint16_t magnitude, bool negative)
 
 static void app_display_feeding(app_feeding_status_t const * feeding)
 {
-    char status[17];
-    char last_level[8] = "LAST:--";
+    char status[20];
+    char last_level[16] = "等级:--";
 
     switch (feeding->state)
     {
         case APP_FEED_WAIT_KEY:
-            (void) snprintf(status, sizeof(status), "WAIT K4");
+            (void) snprintf(status, sizeof(status), "等待投喂");
             break;
         case APP_FEED_RUNNING:
-            (void) snprintf(status, sizeof(status), "FEED %u/%u",
+            (void) snprintf(status, sizeof(status), "投喂%u/%u",
                             (unsigned int) feeding->completed_cycles,
                             (unsigned int) feeding->planned_cycles);
             break;
         case APP_FEED_WAIT_RESULT:
-            (void) snprintf(status, sizeof(status), "OBS WAIT");
+            (void) snprintf(status, sizeof(status), "等待识别");
             break;
         case APP_FEED_COMPLETE:
-            (void) snprintf(status, sizeof(status), "DONE");
+            (void) snprintf(status, sizeof(status), "投喂完成");
             break;
         case APP_FEED_FAULT_LOCKED:
+            if (APP_FEED_FAULT_OBSERVE_TIMEOUT == feeding->fault)
+            {
+                (void) snprintf(status, sizeof(status), "识别超时");
+            }
+            else if (APP_FEED_FAULT_OBSERVE_REJECTED == feeding->fault)
+            {
+                (void) snprintf(status, sizeof(status), "识别异常");
+            }
+            else
+            {
+                (void) snprintf(status, sizeof(status), "投喂故障%u", (unsigned int) feeding->fault);
+            }
+            break;
         default:
-            (void) snprintf(status, sizeof(status), "FAULT %u", (unsigned int) feeding->fault);
+            (void) snprintf(status, sizeof(status), "投喂故障%u", (unsigned int) feeding->fault);
             break;
     }
 
     /* 新批次等待识别时继续显示上一份有效结果，避免把旧等级误作本次结果。 */
     if ((feeding->result_ready || (feeding->round_count > 0U)) && (feeding->result_level <= 2U))
     {
-        last_level[5] = (char) ('0' + feeding->result_level);
-        last_level[6] = '\0';
+        (void) snprintf(last_level, sizeof(last_level), "等级:%u", (unsigned int) feeding->result_level);
     }
     BSP_SSD1306_DrawText(3U, 0U, status);
     BSP_SSD1306_DrawText(3U, 9U, last_level);
@@ -114,7 +126,7 @@ static void app_display_update(uint32_t now_ms,
     s_oled_last_update_ms = now_ms;
 
     BSP_SSD1306_ClearBuffer();
-    BSP_SSD1306_DrawText(0U, 4U, "水质监测");
+    BSP_SSD1306_DrawText(0U, 3U, "PondSence");
     BSP_SSD1306_DrawText(1U, 0U, "水温:");
     BSP_SSD1306_DrawText(2U, 0U, "pH值:");
 

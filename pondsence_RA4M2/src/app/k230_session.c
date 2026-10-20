@@ -1,6 +1,6 @@
-#include "app_k230.h"
+#include "k230_session.h"
 
-#include "../modules/uart_rx/uart_rx.h"
+#include "../modules/uart_links/uart_links.h"
 
 app_k230_status_t g_app_k230;
 
@@ -97,7 +97,7 @@ void App_K230_Init(void)
 {
     g_app_k230.state = APP_K230_IDLE;
     g_app_k230.next_event_id = 1U;
-    Uart_Rx_RegisterK230Handler(app_k230_handle_frame);
+    Uart_Links_RegisterK230Handler(app_k230_handle_frame);
 }
 
 fsp_err_t App_K230_StartObserve(uint32_t now_ms)
@@ -111,7 +111,7 @@ fsp_err_t App_K230_StartObserve(uint32_t now_ms)
     }
 
     uint32_t const event_id = g_app_k230.next_event_id;
-    fsp_err_t const result = Uart_Rx_K230SendObserve(event_id);
+    fsp_err_t const result = Uart_Links_K230SendObserve(event_id);
     g_app_k230.last_write_result = (uint32_t) result;
     if (FSP_SUCCESS != result)
     {
@@ -127,7 +127,7 @@ fsp_err_t App_K230_StartObserve(uint32_t now_ms)
     return FSP_SUCCESS;
 }
 
-void App_K230_Process(uint32_t now_ms, bool manual_allowed)
+void App_K230_Process(uint32_t now_ms)
 {
     if (((APP_K230_WAIT_ACK == g_app_k230.state) ||
          (APP_K230_OBSERVING == g_app_k230.state)) &&
@@ -138,12 +138,4 @@ void App_K230_Process(uint32_t now_ms, bool manual_allowed)
         ++g_app_k230.timeout_count;
     }
 
-    if (2U == g_uart_probe.request)
-    {
-        g_uart_probe.request = 0U;
-        if (manual_allowed)
-        {
-            (void) App_K230_StartObserve(now_ms);
-        }
-    }
 }

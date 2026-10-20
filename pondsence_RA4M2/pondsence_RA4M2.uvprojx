@@ -395,54 +395,64 @@
               <FilePath>.\src\hal_warmstart.c</FilePath>
             </File>
             <File>
-              <FileName>app_main.c</FileName>
+              <FileName>runtime.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\src\app\app_main.c</FilePath>
+              <FilePath>.\src\app\runtime.c</FilePath>
             </File>
             <File>
-              <FileName>app_main.h</FileName>
+              <FileName>runtime.h</FileName>
               <FileType>5</FileType>
-              <FilePath>.\src\app\app_main.h</FilePath>
+              <FilePath>.\src\app\runtime.h</FilePath>
             </File>
             <File>
-              <FileName>app_feeding.c</FileName>
+              <FileName>sensing.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\src\app\app_feeding.c</FilePath>
+              <FilePath>.\src\app\sensing.c</FilePath>
             </File>
             <File>
-              <FileName>app_feeding.h</FileName>
+              <FileName>sensing.h</FileName>
               <FileType>5</FileType>
-              <FilePath>.\src\app\app_feeding.h</FilePath>
+              <FilePath>.\src\app\sensing.h</FilePath>
             </File>
             <File>
-              <FileName>app_k230.c</FileName>
+              <FileName>feeding.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\src\app\app_k230.c</FilePath>
+              <FilePath>.\src\app\feeding.c</FilePath>
             </File>
             <File>
-              <FileName>app_k230.h</FileName>
+              <FileName>feeding.h</FileName>
               <FileType>5</FileType>
-              <FilePath>.\src\app\app_k230.h</FilePath>
+              <FilePath>.\src\app\feeding.h</FilePath>
             </File>
             <File>
-              <FileName>app_network.c</FileName>
+              <FileName>k230_session.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\src\app\app_network.c</FilePath>
+              <FilePath>.\src\app\k230_session.c</FilePath>
             </File>
             <File>
-              <FileName>app_network.h</FileName>
+              <FileName>k230_session.h</FileName>
               <FileType>5</FileType>
-              <FilePath>.\src\app\app_network.h</FilePath>
+              <FilePath>.\src\app\k230_session.h</FilePath>
             </File>
             <File>
-              <FileName>app_display.c</FileName>
+              <FileName>network.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\src\app\app_display.c</FilePath>
+              <FilePath>.\src\app\network.c</FilePath>
             </File>
             <File>
-              <FileName>app_display.h</FileName>
+              <FileName>network.h</FileName>
               <FileType>5</FileType>
-              <FilePath>.\src\app\app_display.h</FilePath>
+              <FilePath>.\src\app\network.h</FilePath>
+            </File>
+            <File>
+              <FileName>display.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\app\display.c</FilePath>
+            </File>
+            <File>
+              <FileName>display.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\app\display.h</FilePath>
             </File>
             <File>
               <FileName>ds18b20.c</FileName>
@@ -470,6 +480,16 @@
               <FilePath>.\src\protocol\k230\k230.h</FilePath>
             </File>
             <File>
+              <FileName>mqtt_codec.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\protocol\mqtt\mqtt_codec.c</FilePath>
+            </File>
+            <File>
+              <FileName>mqtt_codec.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\src\protocol\mqtt\mqtt_codec.h</FilePath>
+            </File>
+            <File>
               <FileName>ds18b20.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\src\modules\ds18b20\ds18b20.h</FilePath>
@@ -490,24 +510,19 @@
               <FilePath>.\src\modules\ssd1306\ssd1306_font.h</FilePath>
             </File>
             <File>
-              <FileName>uart_rx.c</FileName>
+              <FileName>uart_links.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\src\modules\uart_rx\uart_rx.c</FilePath>
+              <FilePath>.\src\modules\uart_links\uart_links.c</FilePath>
             </File>
             <File>
-              <FileName>uart_rx.h</FileName>
+              <FileName>uart_links.h</FileName>
               <FileType>5</FileType>
-              <FilePath>.\src\modules\uart_rx\uart_rx.h</FilePath>
+              <FilePath>.\src\modules\uart_links\uart_links.h</FilePath>
             </File>
             <File>
-              <FileName>app_network.local.h</FileName>
+              <FileName>network_config.h</FileName>
               <FileType>5</FileType>
-              <FilePath>.\src\app\app_network.local.h</FilePath>
-            </File>
-            <File>
-              <FileName>app_network_config.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\src\app\app_network_config.h</FilePath>
+              <FilePath>.\src\app\network_config.h</FilePath>
             </File>
           </Files>
         </Group>

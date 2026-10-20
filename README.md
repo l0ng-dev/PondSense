@@ -1,93 +1,51 @@
 # PondSense RA4M2
 
-PondSense 是一个智能鱼类投喂项目。本分支保存基于 Renesas RA4M2 的固件工程，已接入水温、pH 信号采集、OLED、ESP-01S 联网、K230 识别结果和投喂电机控制。`dev/ra4m2` 与仓库 `main` 分支采用独立提交历史，供 RA4M2 方案继续开发。
+基于 Renesas RA4M2 的智能鱼类投喂固件。RA4M2 采集水温和 pH 模拟信号，驱动 OLED，借助 ESP-01S 发布 MQTT 遥测，并根据 K230 返回的摄食等级安排投喂电机动作。工程使用 FSP 6.6.0、RA Smart Configurator（RASC）、Keil MDK 和无 RTOS 主循环。
 
-## 当前实现
+[项目架构说明](项目架构说明.md)介绍模块职责、引脚、通信协议、投喂状态机及维护边界；本页提供第三方获取工程所需的入口信息。
 
-- **水温**：使用 P015 上的单总线驱动单只外部供电的 DS18B20，包含温度转换、读取、CRC 校验及错误状态处理。
-- **pH 信号**：通过 P014／ADC0 AN012 读取原始 ADC 值，并进行采样窗口过滤。代码提供未校准的临时 pH 估算值；它不能作为已校准的水质测量结果。
-- **应用调度**：使用 AGT0 提供毫秒时间基，在无 RTOS 的主循环中调度采样并记录状态。
-- **OLED**：SSD1306 四针屏，软件 I²C，7 位地址 `0x3C`；P000 作 SCL、P001 作 SDA。分块刷新，每次主循环最多发送一个短事务，包含 ACK、超时及总线恢复检查。界面显示温度、带未校准 `*` 标记的 pH 估算、投喂状态和最近一次有效等级；现场确认实屏显示正常。
-- **投喂控制**：K4（P013）启动首个单循环投喂；单循环软件运行时长为 17 秒，由 AGT0 中断检查限时停机。SCI2 通过 P302 TX／P301 RX 与 K230 通信，接收等级 `0/1/2` 并决定结束或后续批次；识别超时、无效结果及电机异常进入故障锁定状态。
-- **联网遥测**：SCI0 通过 P101 TX／P100 RX 连接 ESP-01S，应用执行 Wi-Fi、TCP 和 MQTT 3.1.1 连接与重连；订阅配置主题，并向该主题的 `/up` 子主题发布遥测。MQTT 下行只记录消息，不控制电机。
+## 仓库内容
 
-当前投喂流程由用户确认实机通过。固件尚无累计投喂循环上限和已启用的独立看门狗；等级 `0` 后保持完成状态，重新按 K4 不会开启新一轮。以上是现阶段行为，不能作为定量出料安全保证。
-
-## OLED 接线（软件 I²C）
-
-以下针号依据 RA4M2-SENSOR V1.0 原理图，断电并按板上 CN4 标号核对方向后接线：
-
-| OLED 引脚 | RA 接点 |
+| 路径 | 用途 |
 | --- | --- |
-| VCC | 3V3 |
-| GND | 公共 GND |
-| SCL | P000，CN4 第 6 针 |
-| SDA | P001，CN4 第 7 针 |
+| `pondsence_RA4M2/configuration.xml` | RASC 的 MCU、引脚与外设配置源 |
+| `pondsence_RA4M2/pondsence_RA4M2.uvprojx` | Keil `Target_1` 工程 |
+| `pondsence_RA4M2/src/app/` | 调度、采样、显示、网络和投喂业务 |
+| `pondsence_RA4M2/src/modules/` | DS18B20、OLED、电机和 UART 链路 |
+| `pondsence_RA4M2/src/protocol/` | K230 文本协议和 MQTT 报文编解码 |
+| `pondsence_RA4M2/ra/`、`ra_cfg/`、`ra_gen/`、`via/` | FSP、生成配置及构建输入 |
+| `tools/F407_SPI_Capture/`、`st7735s_backup_2026-10-17/` | 历史诊断工具与显示方案归档；不参与 RA4M2 固件构建 |
 
-OLED 信号线应接 P000/P001。P000/P001 配置为输出高、N 沟道开漏，高电平表示释放总线；需有到 3.3 V 的外部上拉，模块资料中的两路上拉为 4.7 kΩ。板上 P407 接有 C19（图纸标注 1 µF）及电压检测网络，不用于 OLED。SCI0/P100/P101、SCI2/P301/P302 继续预留给 ESP-01S 和 K230。
+配置中的完整器件型号为 `R7FA4M2AD3CFL`。目录名 `pondsence_RA4M2` 是现有工程路径；OLED 首行实际显示 `PondSence`。
 
-烧录后观察 `g_oled_status`：正常应 `initialized=1`、`last_error=FSP_SUCCESS`，`frame_count` 随刷新增长。`nack_count` 表示无应答，`last_nack_byte=0` 表示地址无应答，`timeout_count` 表示 SCL 未能升高，`bus_error_count` 表示 SDA 空闲或发送高位时仍为低。当前诊断接口为 `g_oled_status`。
+## 当前行为
 
-## 工程位置
+- P015 上的单只 DS18B20 采用外部供电、单总线读取和 scratchpad CRC 校验；P014/ADC0 AN12 提供 pH 原始值、五点滤波和**未校准**的临时估算。
+- P000/P001 以开漏 GPIO 模拟 I²C，分块刷新四针 SSD1306 OLED；界面显示水温、带 `*` 标记的 pH 估算、投喂状态和最近一次有效等级。
+- 按下 K4 后先执行一次 17 秒抽拉。最后一个抽拉循环开始约 8 秒后向 K230 请求观察；有效等级 0 结束本轮，等级 1/2 分别安排下一批 1/2 次完整抽拉，再重新识别。批次间隔 1 秒。完成后需复位才能重新按 K4 启动。
+- 电机单次运行由 AGT0 的 1 ms 中断检查 17 秒期限。K230 无效结果、识别超时或电机错误会使投喂进入故障锁定。IWDT 配置为自动启动，主循环约每秒刷新。
+- ESP-01S 使用 SCI0 的 AT/TCP 链路建立 MQTT 3.1.1 连接；固件订阅配置主题，向该主题的 `/up` 子主题发布水温、pH 和摄食等级。下行消息只记录，不控制电机。
 
-| 路径 | 内容 |
-| --- | --- |
-| `pondsence_RA4M2/pondsence_RA4M2.uvprojx` | Keil 工程 |
-| `pondsence_RA4M2/configuration.xml` | RA Smart Configurator 配置 |
-| `pondsence_RA4M2/src/app/app_main.c` | 应用调度、pH 估算与状态管理 |
-| `pondsence_RA4M2/src/app/app_display.c` | 显示缓存、数值排版、投喂状态与 OLED 刷新调度 |
-| `pondsence_RA4M2/src/app/app_feeding.c`、`app_k230.c` | 自动投喂状态机与 K230 事务管理 |
-| `pondsence_RA4M2/src/app/app_network.c`、`app_network_config.h` | ESP-01S 联网、MQTT 状态机及公开配置入口 |
-| `pondsence_RA4M2/src/modules/feed_motor/`、`src/modules/uart_rx/`、`src/protocol/k230/` | 电机、双路 UART 接收和 K230 协议 |
-| `pondsence_RA4M2/src/modules/ds18b20/` | DS18B20 驱动 |
-| `pondsence_RA4M2/src/modules/ssd1306/` | OLED 驱动与 `ssd1306_font.h` 字库 |
-| `pondsence_RA4M2/ra/`、`pondsence_RA4M2/ra_cfg/`、`pondsence_RA4M2/ra_gen/` | 工程使用的 FSP 组件与生成文件 |
+**投喂说明：**17 秒是一次完整抽拉所需的设计时长，不是整轮上限。当前代码没有整轮累计抽拉次数或出料量上限；该值须在有饵料时测得单次出料量后确定。
 
-## 打开与构建
+## 获取、配置和构建
 
-工程配置记录的器件为 `R7FA4M2AD3CFL`，FSP 版本为 `6.6.0`，Keil 工程使用 ARM Compiler 6.24。使用 Keil µVision 打开 `pondsence_RA4M2/pondsence_RA4M2.uvprojx`。如需重新生成配置或构建，请先安装与工程配置兼容的 Renesas RA Smart Configurator，并核对 `pondsence_RA4M2/rasc_version.txt` 中的本机安装路径及 Keil 工具链配置。当前 `Target_1_build.log` 记录 2026-10-18 的 RASC 生成、Keil 编译链接和 Smart Bundle 生成：0 错误、0 警告，Code=19784、RO=3440、RW=36、ZI=6940。构建产物在 `pondsence_RA4M2/Objects/`；构建记录不能代替烧录回执或实机测试记录。
+1. 安装 Keil MDK、适配 `R7FA4M2AD3CFL` 的 Renesas RA Device Pack，以及与本工程匹配的 RASC/FSP 6.6.0。现有本机构建使用 Arm Compiler 6.24；其他版本需自行核对兼容性。
+2. 打开 `pondsence_RA4M2/pondsence_RA4M2.uvprojx`，选择 `Target_1`。工程的 Keil 构建前命令调用 RASC 生成，构建后命令生成 Smart Bundle。
+3. Keil 构建前后命令使用工程路径宏定位脚本与配置，无需按克隆目录修改。`rasc_launcher.bat` 会调用 `rasc_version.bat` 查找已安装的 RASC，并在本机创建被 Git 忽略的 `rasc_version.txt`；若自动查找失败，先安装或选择适配本工程的 RASC，再检查该文件中的可执行文件路径。
+4. 如需联网，在 `pondsence_RA4M2/src/app/` 下创建不会提交的 `network.local.h`，定义 `APP_NETWORK_WIFI_SSID`、`APP_NETWORK_WIFI_PASSWORD`、`APP_NETWORK_MQTT_HOST`、`APP_NETWORK_MQTT_PORT`、`APP_NETWORK_MQTT_TOPIC` 和 `APP_NETWORK_MQTT_CLIENT_ID`；可选定义 `APP_NETWORK_TELEMETRY_INTERVAL_MS`。接口和空默认值见 `network_config.h`。缺少有效本地配置时，联网状态机保持禁用。
+5. 检查 RASC 生成结果与 Keil 编译、链接、HEX 转换和 Smart Bundle 的实际输出，再使用与板卡相符的工具单独烧录与验证。`Objects/`、`Listings/`、本地 RASC/联网配置及构建日志均被 Git 忽略。
 
-联网参数由 Git 忽略的 `pondsence_RA4M2/src/app/app_network.local.h` 提供；仓库内的 `app_network_config.h` 只保留配置宏入口和空默认值。本地凭据、含凭据的固件产物及构建目录不要提交。
+不要将真实热点密码、MQTT 标识或包含这些值的固件产物提交到公开仓库。重新生成项目内容时，以 `configuration.xml` 为上游配置，并检查生成差异和 Keil 工程设置。
 
-## 模块设计
+## 接线与验证边界
 
-- `app_main.c/.h`：采样调度、pH 估算及状态管理。
-- `app_display.c/.h`：显示缓存、数值排版与刷新调度。
-- `app_feeding.c/.h`、`app_k230.c/.h`：投喂批次、K230 观察结果与故障状态。
-- `app_network.c/.h`：ESP-01S AT/TCP/MQTT 状态机与遥测。
-- `feed_motor.c/.h`、`uart_rx.c/.h`、`protocol/k230/`：电机限时、串口接收与 K230 协议处理。
-- `ssd1306.c/.h`：软件 I²C 与 SSD1306 页式显示驱动。公共头文件通过 `bsp_api.h` 引入必要类型，具体硬件配置依赖 `hal_data.h` 位于 `.c` 中。
-- `ssd1306_font.h`：95 个 ASCII 字符和 21 个 16×16 中文字模，仅支持已收录汉字；来源说明保留在文件中。
+引脚、方向和协议见[架构说明的接口表](项目架构说明.md#7-硬件接口与引脚)。接线前应核对实际 PCB 版本、供电、信号电平、公共地及模块引脚方向；配置文件和本 README 不能替代实物测量。OLED 和 DS18B20 的开漏数据线需要合适的 3.3 V 上拉；pH 模块 PO 在接入 P014 前须确认全工况及上电瞬间的输入电压范围。
 
-RA 生成文件应通过 RASC 配置与生成流程维护，避免手工修改生成代码及注释。
+2026-10-20 的本地 `Target_1` 构建记录显示 RASC 生成、Keil 编译链接及 Smart Bundle 成功，**0 错误、0 警告**；Code=19964、RO-data=3720、RW-data=32、ZI-data=6612。构建日志和产物不随仓库发布。此前有短时 MCP 观察到在线遥测计数增长、K4 触发及 K230 ACK/RESULT；这些记录没有把已烧录固件与当前源码的哈希逐一对应，不能替代第三方复现。
 
-## 验证状态与已知限制
+目前没有 pH 标准液标定、带饵料的单次出料量和整轮上限数据，也没有可公开复核的长期压力测试记录。pH 估算值不应用作已校准水质数据。
 
-测试环境：RA4M2-SENSOR V1.0、SSD1306 四针 OLED、3.3 V 供电，软件 I²C 使用上述接线。以下实机结果来自现场测试人员反馈。
+## 历史资料
 
-| 检查项目 | 结果及范围 |
-| --- | --- |
-| OLED 显示与刷新 | 软件 I²C 版本正常显示并刷新；用户确认新增投喂状态和等级的界面实屏正常 |
-| OLED 诊断 | 先前软件 I²C 版本的 Watch 记录为 `initialized=1`、`last_error=FSP_SUCCESS`、`frame_count=4`，错误、NACK、超时和总线错误计数均为 0；该记录不是全部版本的长期统计 |
-| 联网及投喂 | 先前 MCP 观察到短时联网遥测与 K230 ACK／RESULT；用户确认投喂闭环、供电及电机电流检查、断网恢复与连续运行通过，具体次数、时长和测量值未记录 |
-| 构建 | 当前 Target_1 构建日志为 0 错误、0 警告；该日志和产物被 Git 忽略，不随源码提交 |
-| 早期静态分析 | OLED 模块拆分阶段，ARMCLANG 目标静态分析覆盖 6 个 C 文件，未报告诊断；未覆盖现阶段全部新增模块，也不代表完整 MISRA 合规认证 |
-| 早期主机侧对照 | 5001 轮旧/新显示调用序列对照通过；该临时验证程序未随仓库提供，不能作为可直接复跑的测试套件 |
-
-已知限制：
-
-- pH 为未校准估算，尚不能作为准确水质测量结果。
-- 暂无饵料和 pH 标准液，单循环出料量、最大允许出料量及 pH 精度未完成定量标定；这些暂不作为当前软件阶段的阻塞项。
-- pH 窗口不稳定时可能继续显示上一笔估算，尚无过期标记。该行为已在提取函数的主机用例中复现，未修复。
-- 分块刷新与界面重绘共用帧缓冲，存在新旧画面片段混合的风险。这是源码检查发现的风险，尚无实机异常记录，未实现帧快照或双缓冲。
-- 尚无带测试时长、次数、固件哈希和测量值的可复核连续运行或整机验收记录；用户反馈不等同于量化测试记录。
-
-## 硬件与数据边界
-
-DS18B20 数据线需要符合目标板供电条件的外部上拉。连接 pH 模块前，应确认其输出电压和 ADC 输入范围相容，并完成实际标定。源码和静态配置不能证明传感器通信、电气连接或整机功能已经通过实测。
-
-## 问题排查记录
-
-- [TFT 显示异常排查与处置报告](TFT显示异常排查与处置报告_2026-10-17.md)：记录花屏转白屏、RS 链路排查、板载负载分析及停止 TFT 方案的结果；根因未最终确认。
-- [F407 被动 SPI 采集工具](tools/F407_SPI_Capture/README.md)：独立调试工程、接线、数据格式与采集限制。
-- [ST7735S 历史驱动归档](st7735s_backup_2026-10-17/README.md)：未通过 RA 显示验收的驱动快照，不参与 OLED 构建。
+[TFT 显示异常排查与处置报告](TFT显示异常排查与处置报告_2026-10-17.md)记录已撤回的 TFT 方案；[F407 SPI 采集工具](tools/F407_SPI_Capture/README.md)和[ST7735S 归档](st7735s_backup_2026-10-17/README.md)仅用于追溯，不属于当前 RA4M2 运行路径。
