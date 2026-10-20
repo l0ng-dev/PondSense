@@ -37,3 +37,6 @@ Desktop.ini
 **/.pytest_cache/
 **/coverage/
 AGENTS.md
+
+# 仅本地保留的项目交接记录
+/智能鱼类投喂器项目交接报告_2026-09-12.md
